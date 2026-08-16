@@ -1,0 +1,89 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  pull-requests: read
+  issues: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Python dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
+      - name: Build with PyInstaller
+        working-directory: backend
+        run: python build.py
+
+      - name: Install NSIS
+        run: |
+          choco install nsis -y
+          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Create portable ZIP
+        run: |
+          set VERSION=${{ github.ref_name }}
+          set VERSION=%VERSION:~1%
+          mkdir SkillsHub-Portable
+          copy dist\SkillsHub.exe SkillsHub-Portable\
+          if exist dist\icon.ico copy dist\icon.ico SkillsHub-Portable\
+          type nul > SkillsHub-Portable\portable.flag
+          mkdir SkillsHub-Portable\data
+          powershell -Command "Compress-Archive -Path SkillsHub-Portable -DestinationPath SkillsHub-Portable-v%VERSION%.zip -Force"
+        shell: cmd
+
+      - name: Create NSIS installer
+        run: |
+          set VERSION=${{ github.ref_name }}
+          set VERSION=%VERSION:~1%
+          "C:\Program Files (x86)\NSIS\makensis.exe" /DVERSION=%VERSION% scripts\installer.nsi
+        shell: cmd
+
+      - name: Prepare release notes
+        shell: pwsh
+        run: |
+          node scripts/extract-changelog.mjs "${{ github.ref_name }}" > release-notes.md 2>$null
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path release-notes.md) -or -not (Get-Content release-notes.md -Raw).Trim()) {
+            Set-Content -Path release-notes.md -Value "Release ${{ github.ref_name }}`n`nSee CHANGELOG.md for release history." -Encoding utf8NoBOM
+          }
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/SkillsHub.exe
+            SkillsHub-Portable-v*.zip
+            SkillsHub-Setup-v*.exe
+          draft: true
+          body_path: release-notes.md
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

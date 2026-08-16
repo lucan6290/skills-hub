@@ -1,0 +1,14 @@
+/* Styles entry point — imports all modular CSS files */
+@import './app.css';
+@import './buttons.css';
+@import './skill-card.css';
+@import './modal.css';
+@import './modals.css';
+@import './skill-detail-modal.css';
+@import './markdown.css';
+@import './database.css';
+@import './explore.css';
+@import './skill-detail-view.css';
+@import './tags-page.css';
+@import './tools-page.css';
+@import './settings.css';

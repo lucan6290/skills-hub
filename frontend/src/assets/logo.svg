@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="sh-bg" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#1a5f54"/>
+      <stop offset="100%" stop-color="#8a4a2d"/>
+    </linearGradient>
+    <linearGradient id="sh-s" x1="20" y1="14" x2="44" y2="50" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#a8e6de"/>
+      <stop offset="50%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f0c06a"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#sh-bg)"/>
+  <!-- Top gloss -->
+  <path d="M16 3 Q3 3 3 16 Q3 13 32 13 Q61 13 61 16 Q61 3 48 3 Z" fill="white" opacity="0.07"/>
+  <!-- S shape: two Bezier curves meeting at center -->
+  <path d="M20 18 C20 13, 44 13, 44 22 C44 28, 20 28, 20 36 C20 45, 44 45, 44 46"
+        fill="none" stroke="url(#sh-s)" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Hub center: white ring + amber dot -->
+  <circle cx="32" cy="29" r="5" fill="white" opacity="0.95"/>
+  <circle cx="32" cy="29" r="2.8" fill="#d9963d"/>
+</svg>
