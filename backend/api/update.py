@@ -1,4 +1,5 @@
 """更新检查与执行 API"""
+import asyncio
 import logging
 import sys
 
@@ -29,8 +30,8 @@ def get_install_mode() -> str:
 
 @router.get("/api/check_update", summary="检查更新")
 async def check_update():
-    """检查 GitHub Releases 是否有新版本"""
-    result = check_for_update(__version__)
+    """检查 GitHub Releases 是否有新版本（在线程池中执行同步网络请求，避免阻塞事件循环）"""
+    result = await asyncio.to_thread(check_for_update, __version__)
     result["install_mode"] = get_install_mode()
     return result
 
@@ -42,9 +43,9 @@ async def do_update():
     if mode == "dev":
         return {"ok": False, "message": "开发模式不支持自动更新"}
 
-    check_result = check_for_update(__version__)
+    check_result = await asyncio.to_thread(check_for_update, __version__)
     if not check_result.get("update_available"):
         return {"ok": False, "message": "当前已是最新版本"}
 
     download_urls = check_result.get("download_urls", {})
-    return perform_update(mode, download_urls)
+    return await asyncio.to_thread(perform_update, mode, download_urls)

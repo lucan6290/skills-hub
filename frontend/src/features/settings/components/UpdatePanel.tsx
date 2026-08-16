@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import {
   CheckCircle,
   AlertCircle,
@@ -29,8 +29,10 @@ const UpdatePanel = ({ t }: UpdatePanelProps) => {
   const [result, setResult] = useState<CheckUpdateResult | null>(null)
   const [state, setState] = useState<UpdateState>('idle')
   const [checkFailed, setCheckFailed] = useState(false)
-  const [autoCheck, setAutoCheck] = useState<boolean | null>(null)
+  const [autoCheck, setAutoCheck] = useState<boolean>(true)
+  const [autoCheckLoaded, setAutoCheckLoaded] = useState(false)
   const [savingAutoCheck, setSavingAutoCheck] = useState(false)
+  const hasAutoChecked = useRef(false)
 
   const doCheck = useCallback(async () => {
     setState('checking')
@@ -45,30 +47,37 @@ const UpdatePanel = ({ t }: UpdatePanelProps) => {
     }
   }, [])
 
-  // 加载「启动时自动检查更新」开关
+  // 组件挂载时立即检查更新（默认自动检查开启）
+  useEffect(() => {
+    if (!hasAutoChecked.current) {
+      hasAutoChecked.current = true
+      doCheck()
+    }
+  }, [doCheck])
+
+  // 加载「启动时自动检查更新」开关设置
   useEffect(() => {
     let cancelled = false
     getAutoCheckUpdate()
       .then((enabled) => {
-        if (!cancelled) setAutoCheck(enabled)
+        if (!cancelled) {
+          setAutoCheck(enabled)
+          setAutoCheckLoaded(true)
+        }
       })
       .catch(() => {
-        if (!cancelled) setAutoCheck(true)
+        if (!cancelled) {
+          setAutoCheck(true)
+          setAutoCheckLoaded(true)
+        }
       })
     return () => {
       cancelled = true
     }
   }, [])
 
-  // 根据开关决定是否启动时自动检查
-  useEffect(() => {
-    if (autoCheck === true) {
-      doCheck()
-    }
-  }, [autoCheck, doCheck])
-
   const handleAutoCheckToggle = useCallback(async () => {
-    if (autoCheck === null || savingAutoCheck) return
+    if (!autoCheckLoaded || savingAutoCheck) return
     const next = !autoCheck
     setAutoCheck(next)
     setSavingAutoCheck(true)
@@ -80,7 +89,7 @@ const UpdatePanel = ({ t }: UpdatePanelProps) => {
     } finally {
       setSavingAutoCheck(false)
     }
-  }, [autoCheck, savingAutoCheck, t])
+  }, [autoCheck, autoCheckLoaded, savingAutoCheck, t])
 
   const handleUpdate = useCallback(async () => {
     if (!result?.update_available) return
@@ -163,21 +172,15 @@ const UpdatePanel = ({ t }: UpdatePanelProps) => {
           </button>
         </div>
       ) : isChecking && !result ? (
-        <div className="settings-v2-item">
-          <div className="settings-v2-item-info">
-            <div className="settings-v2-item-title">
-              <Loader2 size={16} className="animate-spin" color="var(--text-tertiary)" />
-              {t('update.checking')}
-            </div>
-          </div>
-        </div>
-      ) : !result ? (
+        // 首次检查中不额外渲染一行——按钮上已有 loading 指示器
+        null
+      ) : !result && autoCheckLoaded && !autoCheck ? (
         <div className="settings-v2-item">
           <div className="settings-v2-item-info">
             <div className="settings-v2-item-desc">{t('update.autoCheckOffHint')}</div>
           </div>
         </div>
-      ) : result.update_available ? (
+      ) : result?.update_available ? (
         <div className="settings-v2-item">
           <div className="settings-v2-item-info">
             <div className="settings-v2-item-title">
@@ -204,7 +207,7 @@ const UpdatePanel = ({ t }: UpdatePanelProps) => {
             </button>
           )}
         </div>
-      ) : (
+      ) : result ? (
         <div className="settings-v2-item">
           <div className="settings-v2-item-info">
             <div className="settings-v2-item-title">
@@ -214,7 +217,7 @@ const UpdatePanel = ({ t }: UpdatePanelProps) => {
             <div className="settings-v2-item-desc">v{result.latest_version}</div>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* 启动时自动检查更新 */}
       <div className="settings-v2-item">
@@ -227,7 +230,7 @@ const UpdatePanel = ({ t }: UpdatePanelProps) => {
           aria-checked={autoCheck === true}
           className={`settings-toggle ${autoCheck === true ? 'checked' : ''}`}
           onClick={handleAutoCheckToggle}
-          disabled={autoCheck === null || savingAutoCheck}
+          disabled={!autoCheckLoaded || savingAutoCheck}
         >
           <span className="settings-toggle-knob" />
         </button>
