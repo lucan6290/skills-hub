@@ -16,12 +16,32 @@ WINDOW_HEIGHT = 800
 WINDOW_MIN_WIDTH = 900
 WINDOW_MIN_HEIGHT = 600
 
+# Windows: 隐藏 subprocess 控制台窗口
+_CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
+
+
+def _run_hidden(args, **kwargs):
+    """以无窗口方式运行子进程（Windows 下隐藏控制台）"""
+    if sys.platform == "win32":
+        kwargs.setdefault("creationflags", _CREATE_NO_WINDOW)
+    kwargs.setdefault("shell", False)
+    return subprocess.run(args, **kwargs)
+
+
+def _check_output_hidden(args, **kwargs):
+    """以无窗口方式运行子进程并捕获输出（Windows 下隐藏控制台）"""
+    if sys.platform == "win32":
+        kwargs.setdefault("creationflags", _CREATE_NO_WINDOW)
+    kwargs.setdefault("shell", False)
+    kwargs.setdefault("text", True)
+    return subprocess.check_output(args, **kwargs)
+
 
 def _find_pid_on_port(port: int):
     """Windows: 通过 netstat 查找占用端口的 PID"""
     try:
-        output = subprocess.check_output(
-            f'netstat -ano | findstr :{port}', shell=True, text=True
+        output = _check_output_hidden(
+            ["netstat", "-ano"],
         )
         for line in output.strip().split("\n"):
             parts = line.strip().split()
@@ -34,10 +54,10 @@ def _find_pid_on_port(port: int):
 
 
 def _is_skills_hub_process(pid: int):
-    """检查进程名是否包含 skills_hub 或 python"""
+    """检查进程名是否包含 skills_hub 或 skillshub"""
     try:
-        output = subprocess.check_output(
-            f'tasklist /FI "PID eq {pid}" /FO CSV /NH', shell=True, text=True
+        output = _check_output_hidden(
+            ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
         )
         name = output.strip().strip('"').split('","')[0].lower()
         return "skillshub" in name or "skills_hub" in name
@@ -48,7 +68,7 @@ def _is_skills_hub_process(pid: int):
 def _kill_process(pid: int):
     """强制杀掉指定 PID 进程"""
     try:
-        subprocess.run(f"taskkill /F /PID {pid}", shell=True, capture_output=True)
+        _run_hidden(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
     except Exception:
         pass
 

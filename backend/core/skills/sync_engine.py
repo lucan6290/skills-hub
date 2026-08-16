@@ -13,6 +13,8 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+_CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
+
 
 class SyncMode(Enum):
     AUTO = "auto"
@@ -210,6 +212,7 @@ def _create_junction(source: Path, target: Path) -> None:
         ["cmd", "/c", "mklink", "/J", f'"{target_str}"', f'"{source_str}"'],
         capture_output=True,
         text=True,
+        creationflags=_CREATE_NO_WINDOW if sys.platform == "win32" else 0,
     )
     if result.returncode != 0:
         detail = result.stderr.strip() or result.stdout.strip()
