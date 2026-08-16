@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-08-16
+
+### Fixed
+- NSIS 安装程序组件选择页面中文乱码（添加 `Unicode true` 指令）
+- 安装程序和 exe 使用错误的蓝色原子图标，替换为 Skills Hub 品牌 S 形 logo
+- 移除 pywebview `create_window` 不支持的 `icon` 参数，修复桌面窗口启动报错
+
+### Changed
+- 统一使用 `favicon.svg` 作为唯一品牌图标源，删除冗余的 `logo.png` 和 Vite 默认 `vite.svg`
+
 ## [0.1.0] - 2026-08-16
 
 ### Added
