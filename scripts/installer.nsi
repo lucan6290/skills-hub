@@ -1,6 +1,9 @@
 ; Skills Hub NSIS 安装脚本
 ; 使用方式: makensis /DVERSION=x.y.z scripts\installer.nsi
 
+; 启用 Unicode 模式，让 NSIS 以 UTF-8 读取脚本并生成 Unicode 安装程序，避免中文乱码
+Unicode true
+
 !define APP_NAME "Skills Hub"
 !define APP_EXE "SkillsHub.exe"
 
