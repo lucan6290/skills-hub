@@ -4,7 +4,6 @@ import subprocess
 import sys
 import threading
 import time
-from pathlib import Path
 
 import uvicorn
 import webview
@@ -16,16 +15,6 @@ WINDOW_WIDTH = 1200
 WINDOW_HEIGHT = 800
 WINDOW_MIN_WIDTH = 900
 WINDOW_MIN_HEIGHT = 600
-
-
-def _get_icon_path() -> str | None:
-    """获取窗口图标路径（兼容开发和打包环境）"""
-    if getattr(sys, "frozen", False):
-        base = Path(sys.executable).parent
-        icon = base / "icon.ico"
-    else:
-        icon = Path(__file__).resolve().parent / "icon.ico"
-    return str(icon) if icon.is_file() else None
 
 
 def _find_pid_on_port(port: int):
@@ -121,16 +110,13 @@ def main():
         sys.exit(1)
 
     # 创建窗口
-    window_kwargs = dict(
+    webview.create_window(
+        WINDOW_TITLE,
         url=f"http://{API_HOST}:{API_PORT}",
         width=WINDOW_WIDTH,
         height=WINDOW_HEIGHT,
         min_size=(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT),
     )
-    icon_path = _get_icon_path()
-    if icon_path:
-        window_kwargs["icon"] = icon_path
-    webview.create_window(WINDOW_TITLE, **window_kwargs)
     webview.start()
 
 
