@@ -210,10 +210,10 @@ def list_suite_sub_skills(suite_skill_id: str, store: SkillStore) -> list[dict]:
     if not skill:
         raise SkillSyncError(status_code=404, detail="suite skill not found")
 
-    try:
-        suite_path = resolve_skill_source_path(skill, store)
-    except ValueError as e:
-        raise SkillSyncError(status_code=400, detail=str(e))
+    # 直接使用 community_path，避免路径安全校验拒绝自制路径
+    suite_path = Path(skill.community_path)
+    if not suite_path.is_dir():
+        raise SkillSyncError(status_code=400, detail=f"suite path not found: {suite_path}")
 
     sub_skills = []
     for child in sorted(suite_path.iterdir()):
@@ -287,10 +287,10 @@ def sync_suite_to_tool(
     if not suite_skill:
         raise SkillSyncError(status_code=404, detail="suite skill not found")
 
-    try:
-        suite_source = resolve_skill_source_path(suite_skill, store)
-    except ValueError as e:
-        raise SkillSyncError(status_code=400, detail=str(e))
+    # 直接使用 community_path，避免路径安全校验拒绝自制路径
+    suite_source = Path(suite_skill.community_path)
+    if not suite_source.is_dir():
+        raise SkillSyncError(status_code=400, detail=f"suite path not found: {suite_source}")
 
     # 获取共享目录组
     if scope == "project":

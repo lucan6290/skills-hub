@@ -58,6 +58,7 @@ export type ManagedSkill = {
     status: string
     target_path: string
     synced_at?: number | null
+    suite_skill_id?: string | null
   }[]
   version?: string | null
   author?: string | null

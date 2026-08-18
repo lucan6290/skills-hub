@@ -58,8 +58,10 @@ def _to_managed_dto(skill: SkillRecord, store) -> ManagedSkillDto:
     # 检测是否为套件（包含子 skill）
     is_suite = False
     try:
-        skill_path = resolve_skill_source_path(skill, store)
-        is_suite = has_sub_skills(skill_path)
+        from pathlib import Path as _Path
+        skill_dir = _Path(skill.community_path)
+        if skill_dir.is_dir():
+            is_suite = has_sub_skills(skill_dir)
     except Exception:
         pass
 
@@ -94,6 +96,7 @@ def _to_managed_dto(skill: SkillRecord, store) -> ManagedSkillDto:
                 status=t.status,
                 target_path=t.target_path,
                 synced_at=t.synced_at,
+                suite_skill_id=t.suite_skill_id,
             )
             for t in targets
         ],

@@ -278,37 +278,36 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
         }
       }
 
-      // 检查是否为套件同步（通过 suite_skill_id 判断 targets 中是否有套件记录）
-      const isSuite = skill.is_suite === true
-      const suiteTargets = skill.targets.filter(
+      const matchingTargets = skill.targets.filter(
         (target) => target.tool === toolId && (target.scope ?? 'global') === skillScope,
       )
-      const synced = suiteTargets.length > 0
+      const synced = matchingTargets.length > 0
 
-      // 套件 + 未同步 → 打开 SuiteSyncModal
-      if (isSuite && !synced) {
-        setSuiteSyncState({
-          skill,
-          toolId,
-          subSkills: [],
-          loadingSubSkills: true,
-        })
+      // 检测是否为套件：优先用 is_suite 标记，否则尝试查询子 skill
+      const maybeSuite = skill.is_suite === true || !synced
+      if (maybeSuite && !synced) {
         try {
           const subs = await get<SuiteSubSkill[]>('list_suite_sub_skills', {
             suite_skill_id: skill.id,
           })
-          setSuiteSyncState((prev) =>
-            prev ? { ...prev, subSkills: subs, loadingSubSkills: false } : null,
-          )
-        } catch (err) {
-          setSuiteSyncState(null)
-          setError(err instanceof Error ? err.message : String(err))
+          if (subs.length > 0) {
+            // 确认是套件，打开选择弹窗
+            setSuiteSyncState({
+              skill,
+              toolId,
+              subSkills: subs,
+              loadingSubSkills: false,
+            })
+            return
+          }
+        } catch {
+          // 不是套件或查询失败，走普通同步流程
         }
-        return
       }
 
       // 套件 + 已同步 → 调用 unsync_suite_from_tool
-      if (isSuite && synced) {
+      const hasSuiteTargets = matchingTargets.some((t) => t.suite_skill_id === skill.id)
+      if ((skill.is_suite || hasSuiteTargets) && synced) {
         setLoading(true)
         setLoadingStartAt(Date.now())
         try {
@@ -343,9 +342,9 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
           if (skillScope === 'project') {
             const targetProjects = Array.from(
               new Set(
-                suiteTargets
-                  .map((target) => target.project_path)
-                  .filter((path): path is string => Boolean(path)),
+                matchingTargets
+                  .map((target: { project_path?: string | null }) => target.project_path)
+                  .filter((path: string | null | undefined): path is string => Boolean(path)),
               ),
             )
             for (const projectPath of targetProjects) {

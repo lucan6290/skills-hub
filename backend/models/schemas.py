@@ -125,6 +125,7 @@ class SkillTargetDto(BaseModel):
     status: str
     target_path: str
     synced_at: Optional[int] = None
+    suite_skill_id: Optional[str] = None
 
 
 class TagDto(BaseModel):
