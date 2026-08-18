@@ -283,9 +283,8 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
       )
       const synced = matchingTargets.length > 0
 
-      // 检测是否为套件：优先用 is_suite 标记，否则尝试查询子 skill
-      const maybeSuite = skill.is_suite === true || !synced
-      if (maybeSuite && !synced) {
+      // 检测是否为套件：尝试查询子 skill 列表
+      if (!synced) {
         try {
           const subs = await get<SuiteSubSkill[]>('list_suite_sub_skills', {
             suite_skill_id: skill.id,
