@@ -11,10 +11,13 @@ from models.schemas import (
     SaveRecentProjectRequest,
     ScopePreferenceDto,
     SetScopePreferenceRequest,
+    SuiteSubSkillDto,
     SyncDirRequest,
     SyncRequest,
     SyncResultDto,
+    SyncSuiteRequest,
     UnsyncRequest,
+    UnsyncSuiteRequest,
 )
 from api.dependencies import get_skill_store
 from core.db.store import SkillStore
@@ -199,3 +202,62 @@ async def set_scope_preference(req: SetScopePreferenceRequest, store: SkillStore
     """设置技能的作用域偏好。"""
     store.set_scope_preference(req.skill_id, req.scope, req.project_paths)
     return {"ok": True}
+
+
+@router.get(
+    "/api/list_suite_sub_skills",
+    response_model=list[SuiteSubSkillDto],
+    summary="列出套件子技能",
+    description="返回指定套件中包含的所有子技能信息。",
+    tags=["Sync"],
+)
+async def list_suite_sub_skills(suite_skill_id: str, store: SkillStore = Depends(get_skill_store)):
+    """列出套件中的子技能。"""
+    try:
+        subs = sync_service.list_suite_sub_skills(suite_skill_id, store)
+        return [SuiteSubSkillDto(**s) for s in subs]
+    except sync_service.SkillSyncError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+
+@router.post(
+    "/api/sync_suite_to_tool",
+    response_model=list[SyncResultDto],
+    summary="同步套件到工具",
+    description="将套件中选中的子技能分别同步到目标 AI 工具。",
+    tags=["Sync"],
+)
+async def sync_suite_to_tool(req: SyncSuiteRequest, store: SkillStore = Depends(get_skill_store)):
+    """将套件子技能同步到指定工具。"""
+    try:
+        return sync_service.sync_suite_to_tool(
+            suite_skill_id=req.suite_skill_id,
+            tool=req.tool,
+            sub_skill_subpaths=req.sub_skill_subpaths,
+            scope=req.scope or "global",
+            project_path=req.project_path,
+            store=store,
+        )
+    except sync_service.SkillSyncError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
+
+
+@router.post(
+    "/api/unsync_suite_from_tool",
+    summary="取消套件同步",
+    description="取消套件中所有子技能在目标工具的同步。",
+    tags=["Sync"],
+)
+async def unsync_suite_from_tool(req: UnsyncSuiteRequest, store: SkillStore = Depends(get_skill_store)):
+    """取消套件在目标工具的同步。"""
+    try:
+        sync_service.unsync_suite_from_tool(
+            suite_skill_id=req.suite_skill_id,
+            tool=req.tool,
+            scope=req.scope or "global",
+            project_path=req.project_path,
+            store=store,
+        )
+        return {"ok": True}
+    except sync_service.SkillSyncError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)

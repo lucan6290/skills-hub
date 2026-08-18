@@ -70,6 +70,7 @@ class SkillTargetRecord:
     synced_at: Optional[int]
     target_content_hash: Optional[str]
     target_updated_at: Optional[int]
+    suite_skill_id: Optional[str] = None
 
 
 @dataclass
@@ -446,6 +447,18 @@ class SkillStore:
         )
         return _row_to_skill(row) if row else None
 
+    def get_skill_by_community_path(self, community_path: str) -> Optional[SkillRecord]:
+        row = self._fetch_one(
+            """SELECT id, name, description, frontmatter_extra, version, author, license,
+                      category, homepage, skill_file_count, skill_dir_size,
+                      source_type, source_ref, source_subpath,
+                      source_revision, source_url, community_path, content_hash, created_at,
+                      updated_at, last_sync_at, last_seen_at, status, sort_order
+               FROM skills WHERE community_path = ? LIMIT 1""",
+            (community_path,),
+        )
+        return _row_to_skill(row) if row else None
+
     def update_skill_description(self, skill_id: str, description: Optional[str]) -> None:
         self._execute(
             "UPDATE skills SET description = ? WHERE id = ?",
@@ -518,8 +531,9 @@ class SkillStore:
         self._execute(
             """INSERT INTO skill_targets (
               id, skill_id, tool, scope, project_path, target_path,
-              mode, status, last_error, synced_at, target_content_hash, target_updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              mode, status, last_error, synced_at, target_content_hash, target_updated_at,
+              suite_skill_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT DO UPDATE SET
               target_path = excluded.target_path,
               mode = excluded.mode,
@@ -527,12 +541,14 @@ class SkillStore:
               last_error = excluded.last_error,
               synced_at = excluded.synced_at,
               target_content_hash = excluded.target_content_hash,
-              target_updated_at = excluded.target_updated_at""",
+              target_updated_at = excluded.target_updated_at,
+              suite_skill_id = excluded.suite_skill_id""",
             (
                 record.id, record.skill_id, record.tool, record.scope,
                 record.project_path, record.target_path, record.mode,
                 record.status, record.last_error, record.synced_at,
                 record.target_content_hash, record.target_updated_at,
+                record.suite_skill_id,
             ),
         )
 
@@ -540,10 +556,22 @@ class SkillStore:
         rows = self._fetch_all(
             """SELECT id, skill_id, tool, scope, project_path, target_path,
                       mode, status, last_error, synced_at,
-                      target_content_hash, target_updated_at
+                      target_content_hash, target_updated_at, suite_skill_id
                FROM skill_targets WHERE skill_id = ?
                ORDER BY tool ASC, scope ASC, project_path ASC""",
             (skill_id,),
+        )
+        return [_row_to_target(r) for r in rows]
+
+    def list_suite_sub_targets(self, suite_skill_id: str) -> list[SkillTargetRecord]:
+        """列出属于某个套件的所有子 skill 同步记录。"""
+        rows = self._fetch_all(
+            """SELECT id, skill_id, tool, scope, project_path, target_path,
+                      mode, status, last_error, synced_at,
+                      target_content_hash, target_updated_at, suite_skill_id
+               FROM skill_targets WHERE suite_skill_id = ?
+               ORDER BY tool ASC, scope ASC, project_path ASC""",
+            (suite_skill_id,),
         )
         return [_row_to_target(r) for r in rows]
 
@@ -561,7 +589,7 @@ class SkillStore:
         row = self._fetch_one(
             """SELECT id, skill_id, tool, scope, project_path, target_path,
                       mode, status, last_error, synced_at,
-                      target_content_hash, target_updated_at
+                      target_content_hash, target_updated_at, suite_skill_id
                FROM skill_targets
                WHERE skill_id = ? AND tool = ? AND scope = ?
                  AND ((? IS NULL AND project_path IS NULL) OR project_path = ?)""",
@@ -573,7 +601,7 @@ class SkillStore:
         row = self._fetch_one(
             """SELECT id, skill_id, tool, scope, project_path, target_path,
                       mode, status, last_error, synced_at,
-                      target_content_hash, target_updated_at
+                      target_content_hash, target_updated_at, suite_skill_id
                FROM skill_targets
                WHERE target_path = ?""",
             (target_path,),
@@ -593,6 +621,21 @@ class SkillStore:
                  AND ((? IS NULL AND project_path IS NULL) OR project_path = ?)""",
             (skill_id, tool, scope, project_path, project_path),
         )
+
+    def delete_suite_targets(self, suite_skill_id: str, tool: str, scope: str, project_path: Optional[str]) -> list[SkillTargetRecord]:
+        """删除属于某个套件的所有子 skill 同步记录，返回被删除的记录。"""
+        records = self.list_suite_sub_targets(suite_skill_id)
+        matching = [
+            r for r in records
+            if r.tool == tool and r.scope == scope
+            and ((project_path is None and r.project_path is None) or r.project_path == project_path)
+        ]
+        for r in matching:
+            self._execute(
+                "DELETE FROM skill_targets WHERE id = ?",
+                (r.id,),
+            )
+        return matching
 
     # ── Tags ────────────────────────────────────────────
 
@@ -1128,6 +1171,7 @@ def _self_heal_schema(conn: sqlite3.Connection) -> None:
     _add_column_if_missing(conn, "tool_adapter_configs", "project_skills_dir", "TEXT")
     _add_column_if_missing(conn, "skill_targets", "target_content_hash", "TEXT")
     _add_column_if_missing(conn, "skill_targets", "target_updated_at", "INTEGER")
+    _add_column_if_missing(conn, "skill_targets", "suite_skill_id", "TEXT NULL")
     _add_column_if_missing(conn, "tool_scan_state", "first_seen_at", "INTEGER")
 
 
@@ -1294,6 +1338,7 @@ def _row_to_target(row: sqlite3.Row) -> SkillTargetRecord:
         synced_at=row["synced_at"],
         target_content_hash=row["target_content_hash"],
         target_updated_at=row["target_updated_at"],
+        suite_skill_id=row["suite_skill_id"],
     )
 
 

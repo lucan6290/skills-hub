@@ -32,6 +32,7 @@ const EditSkillTagsModal = lazy(() => import('@/features/skills/modals/EditSkill
 const ImportModal = lazy(() => import('@/features/import-flow/components/ImportModal'))
 const LocalPickModal = lazy(() => import('@/features/import-flow/components/LocalPickModal'))
 const SharedDirModal = lazy(() => import('@/features/skills/modals/SharedDirModal'))
+const SuiteSyncModal = lazy(() => import('@/features/skills/modals/SuiteSyncModal'))
 const ScopeSyncModal = lazy(() => import('@/features/skills/modals/ScopeSyncModal'))
 const NewToolsModal = lazy(() => import('@/features/tools/modals/NewToolsModal'))
 const DeleteModal = lazy(() => import('@/features/skills/modals/DeleteModal'))
@@ -505,6 +506,19 @@ function AppContent() {
             otherLabels={scopeManager.pendingSharedLabels?.otherLabels ?? ''}
             onRequestClose={scopeManager.handleSharedCancel}
             onConfirm={scopeManager.handleSharedConfirm}
+            t={t}
+          />
+        ) : null}
+
+        {scopeManager.suiteSyncState ? (
+          <SuiteSyncModal
+            open={Boolean(scopeManager.suiteSyncState)}
+            loading={globalLoading}
+            toolLabel={scopeManager.suiteSyncToolLabel}
+            subSkills={scopeManager.suiteSyncState.subSkills}
+            loadingSubSkills={scopeManager.suiteSyncState.loadingSubSkills}
+            onRequestClose={scopeManager.handleSuiteSyncClose}
+            onConfirm={scopeManager.handleSuiteSyncConfirm}
             t={t}
           />
         ) : null}

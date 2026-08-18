@@ -176,6 +176,7 @@ class ManagedSkillDto(BaseModel):
     targets: list[SkillTargetDto] = []
     usage: list[SkillUsageDto] = []
     sort_order: float = 0.0
+    is_suite: bool = False
 
 
 # ── Tags ────────────────────────────────────────────────
@@ -216,6 +217,27 @@ class UnsyncRequest(BaseModel):
     tool: str
     scope: Optional[str] = None
     project_path: Optional[str] = None
+
+
+class SyncSuiteRequest(BaseModel):
+    suite_skill_id: str
+    tool: str
+    sub_skill_subpaths: list[str]
+    scope: Optional[str] = None
+    project_path: Optional[str] = None
+
+
+class UnsyncSuiteRequest(BaseModel):
+    suite_skill_id: str
+    tool: str
+    scope: Optional[str] = None
+    project_path: Optional[str] = None
+
+
+class SuiteSubSkillDto(BaseModel):
+    name: str
+    subpath: str
+    description: Optional[str] = None
 
 
 class SyncDirRequest(BaseModel):

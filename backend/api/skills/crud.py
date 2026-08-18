@@ -49,9 +49,20 @@ _logger = logging.getLogger(__name__)
 
 
 def _to_managed_dto(skill: SkillRecord, store) -> ManagedSkillDto:
+    from core.skills.source_paths import has_sub_skills, resolve_skill_source_path
+
     targets = store.list_skill_targets(skill.id)
     tags = store.get_skill_tags(skill.id)
     usage = store.get_skill_usage(skill.id)
+
+    # 检测是否为套件（包含子 skill）
+    is_suite = False
+    try:
+        skill_path = resolve_skill_source_path(skill, store)
+        is_suite = has_sub_skills(skill_path)
+    except Exception:
+        pass
+
     return ManagedSkillDto(
         id=skill.id,
         name=skill.name,
@@ -99,6 +110,7 @@ def _to_managed_dto(skill: SkillRecord, store) -> ManagedSkillDto:
             for u in usage
         ],
         sort_order=skill.sort_order,
+        is_suite=is_suite,
     )
 
 

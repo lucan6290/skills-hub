@@ -200,3 +200,225 @@ def sync_skill(req: SyncRequest, store: SkillStore) -> SyncResultDto:
         mode_used=result.mode_used.value,
         target_path=str(result.target_path),
     )
+
+
+def list_suite_sub_skills(suite_skill_id: str, store: SkillStore) -> list[dict]:
+    """列出套件中包含的子 skill 信息（名称、子路径、描述）。"""
+    from core.skills.installer import is_skill_dir, parse_skill_md
+
+    skill = store.get_skill_by_id(suite_skill_id)
+    if not skill:
+        raise SkillSyncError(status_code=404, detail="suite skill not found")
+
+    try:
+        suite_path = resolve_skill_source_path(skill, store)
+    except ValueError as e:
+        raise SkillSyncError(status_code=400, detail=str(e))
+
+    sub_skills = []
+    for child in sorted(suite_path.iterdir()):
+        if not child.is_dir():
+            continue
+        if not is_skill_dir(child):
+            continue
+        fm = parse_skill_md(child)
+        sub_skills.append({
+            "name": fm.name or child.name,
+            "subpath": child.name,
+            "description": fm.description,
+        })
+
+    if not sub_skills:
+        raise SkillSyncError(status_code=400, detail="no sub-skills found in suite")
+
+    return sub_skills
+
+
+def sync_suite_to_tool(
+    suite_skill_id: str,
+    tool: str,
+    sub_skill_subpaths: list[str],
+    scope: str,
+    project_path: Optional[str],
+    store: SkillStore,
+) -> list[SyncResultDto]:
+    """将套件中选中的子 skill 分别同步到目标工具。"""
+    adapter = adapter_by_key(tool)
+    if not adapter:
+        raise SkillSyncError(status_code=400, detail="unknown tool")
+
+    scope = _normalize_scope(scope)
+    if scope == "project" and not supports_project_scope(adapter):
+        raise SkillSyncError(status_code=400, detail={
+            "code": ErrorCode.PROJECT_SCOPE_UNSUPPORTED,
+            "tool_key": adapter.id.as_key(),
+        })
+
+    project_root = None
+    if scope == "project":
+        if not project_path:
+            raise SkillSyncError(status_code=400, detail="project_path is required for project scope")
+        expanded = expand_home(project_path)
+        if not os.path.isdir(expanded):
+            raise SkillSyncError(status_code=400, detail=f"project_path must be an existing directory: {expanded}")
+        project_root = expanded
+
+    if scope == "global" and not is_tool_installed(adapter):
+        raise SkillSyncError(status_code=400, detail={
+            "code": ErrorCode.TOOL_NOT_INSTALLED,
+            "tool_key": adapter.id.as_key(),
+        })
+
+    if project_root:
+        tool_root = resolve_project_path(adapter, project_root)
+    else:
+        tool_root = resolve_default_path(adapter)
+
+    try:
+        os.makedirs(tool_root, exist_ok=True)
+    except PermissionError:
+        raise SkillSyncError(status_code=400, detail={
+            "code": ErrorCode.TOOL_NOT_WRITABLE,
+            "tool": adapter.display_name,
+            "path": str(tool_root),
+        })
+
+    suite_skill = store.get_skill_by_id(suite_skill_id)
+    if not suite_skill:
+        raise SkillSyncError(status_code=404, detail="suite skill not found")
+
+    try:
+        suite_source = resolve_skill_source_path(suite_skill, store)
+    except ValueError as e:
+        raise SkillSyncError(status_code=400, detail=str(e))
+
+    # 获取共享目录组
+    if scope == "project":
+        group = adapters_sharing_project_skills_dir(adapter)
+    else:
+        group = adapters_sharing_skills_dir(adapter)
+
+    results = []
+    now_ts = int(time.time() * 1000)
+
+    for subpath in sub_skill_subpaths:
+        source_path = suite_source / subpath
+        if not source_path.is_dir():
+            logger.warning("sub-skill path not found: %s", source_path)
+            continue
+
+        try:
+            target = safe_child_path(tool_root, safe_dir_name(subpath), "sub-skill name")
+        except ValueError as e:
+            logger.warning("invalid sub-skill name %s: %s", subpath, e)
+            continue
+
+        # 查找对应的子 skill DB 记录（通过 community_path 匹配）
+        sub_community_path = str(source_path)
+        sub_skill_record = store.get_skill_by_community_path(sub_community_path)
+
+        # 执行同步
+        try:
+            result = sync_dir_for_tool_with_overwrite(tool, str(source_path), str(target), overwrite=True)
+        except FileExistsError:
+            logger.warning("target exists for sub-skill %s: %s", subpath, target)
+            continue
+        except Exception as e:
+            logger.warning("sync failed for sub-skill %s: %s", subpath, e)
+            continue
+
+        # 为共享目录组的每个工具写记录
+        for a in group:
+            if scope == "global" and not is_tool_installed(a):
+                continue
+
+            record_skill_id = sub_skill_record.id if sub_skill_record else suite_skill_id
+            target_hash = None
+            target_hash_time = None
+            if result.mode_used.value == "copy":
+                try:
+                    target_hash = hash_dir(str(result.target_path))
+                    target_hash_time = now_ts
+                except Exception:
+                    pass
+
+            record = SkillTargetRecord(
+                id=str(uuid.uuid4()),
+                skill_id=record_skill_id,
+                tool=a.id.as_key(),
+                scope=scope,
+                project_path=project_root,
+                target_path=str(result.target_path),
+                mode=result.mode_used.value,
+                status="ok",
+                last_error=None,
+                synced_at=now_ts,
+                target_content_hash=target_hash,
+                target_updated_at=target_hash_time,
+                suite_skill_id=suite_skill_id,
+            )
+            store.upsert_skill_target(record)
+            if scope == "global":
+                _refresh_global_tool_cache(a.id.as_key())
+
+        results.append(SyncResultDto(
+            mode_used=result.mode_used.value,
+            target_path=str(result.target_path),
+        ))
+
+    # 记录套件级同步统计
+    try:
+        store.record_skill_sync(suite_skill_id, tool)
+    except Exception as e:
+        logger.warning("failed to record suite sync: %s", e)
+
+    return results
+
+
+def unsync_suite_from_tool(
+    suite_skill_id: str,
+    tool: str,
+    scope: str,
+    project_path: Optional[str],
+    store: SkillStore,
+) -> None:
+    """取消套件中所有子 skill 在目标工具的同步。"""
+    scope = _normalize_scope(scope)
+    adapter = adapter_by_key(tool)
+
+    project_root = None
+    if scope == "project" and project_path:
+        project_root = expand_home(project_path)
+
+    # 获取共享目录组
+    if adapter:
+        if scope == "project":
+            group = adapters_sharing_project_skills_dir(adapter)
+        else:
+            group = adapters_sharing_skills_dir(adapter)
+        group_keys = [a.id.as_key() for a in group]
+    else:
+        group_keys = [tool]
+
+    removed_paths: set[str] = set()
+    for key in group_keys:
+        deleted = store.delete_suite_targets(suite_skill_id, key, scope, project_root)
+        for rec in deleted:
+            if rec.target_path not in removed_paths:
+                try:
+                    from core.utils.path_safety import require_path_within
+                    from core.tools.adapters import _target_base_for_record
+                    target_path = require_path_within(
+                        Path(rec.target_path),
+                        _target_base_for_record(rec),
+                        "target path",
+                    )
+                    _remove_path_any(target_path)
+                except Exception:
+                    logger.error(
+                        "unsync suite failed to remove target: suite=%s tool=%s path=%s",
+                        suite_skill_id, key, rec.target_path, exc_info=True,
+                    )
+                removed_paths.add(rec.target_path)
+            if scope == "global":
+                _refresh_global_tool_cache(key)

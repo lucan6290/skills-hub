@@ -3,7 +3,7 @@ import type { TFunction } from 'i18next'
 import { parseErrorDetail } from '@/lib/errors'
 import { saveScopePreference } from '@/lib/api'
 import { useApi } from '@/hooks/useApi'
-import type { ManagedSkill, ToolOption } from '../types'
+import type { ManagedSkill, SuiteSubSkill, ToolOption } from '../types'
 
 type SkillScopeState = Record<
   string,
@@ -64,6 +64,14 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
   const [recentProjects, setRecentProjects] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingStartAt, setLoadingStartAt] = useState<number | null>(null)
+
+  // ─── Suite Sync State ──────────────────────
+  const [suiteSyncState, setSuiteSyncState] = useState<{
+    skill: ManagedSkill
+    toolId: string
+    subSkills: SuiteSubSkill[]
+    loadingSubSkills: boolean
+  } | null>(null)
 
   // 加载最近项目
   useEffect(() => {
@@ -269,11 +277,62 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
           return
         }
       }
-      const matchingTargets = skill.targets.filter(
+
+      // 检查是否为套件同步（通过 suite_skill_id 判断 targets 中是否有套件记录）
+      const isSuite = skill.is_suite === true
+      const suiteTargets = skill.targets.filter(
         (target) => target.tool === toolId && (target.scope ?? 'global') === skillScope,
       )
-      const synced = matchingTargets.length > 0
+      const synced = suiteTargets.length > 0
 
+      // 套件 + 未同步 → 打开 SuiteSyncModal
+      if (isSuite && !synced) {
+        setSuiteSyncState({
+          skill,
+          toolId,
+          subSkills: [],
+          loadingSubSkills: true,
+        })
+        try {
+          const subs = await get<SuiteSubSkill[]>('list_suite_sub_skills', {
+            suite_skill_id: skill.id,
+          })
+          setSuiteSyncState((prev) =>
+            prev ? { ...prev, subSkills: subs, loadingSubSkills: false } : null,
+          )
+        } catch (err) {
+          setSuiteSyncState(null)
+          setError(err instanceof Error ? err.message : String(err))
+        }
+        return
+      }
+
+      // 套件 + 已同步 → 调用 unsync_suite_from_tool
+      if (isSuite && synced) {
+        setLoading(true)
+        setLoadingStartAt(Date.now())
+        try {
+          setActionMessage(t('suiteSync.unsyncingSuite', { name: skill.name, tool: toolLabel }))
+          await post('unsync_suite_from_tool', {
+            suite_skill_id: skill.id,
+            tool: toolId,
+            scope: skillScope,
+            project_path: skillScope === 'project' ? projects[0] : undefined,
+          })
+          setActionMessage(t('suiteSync.suiteUnsynced'))
+          setSuccessToastMessage(t('suiteSync.suiteUnsynced'))
+          setActionMessage(null)
+          await loadManagedSkills()
+        } catch (err) {
+          setError(err instanceof Error ? err.message : String(err))
+        } finally {
+          setLoading(false)
+          setLoadingStartAt(null)
+        }
+        return
+      }
+
+      // 普通 skill 同步逻辑（不变）
       setLoading(true)
       setLoadingStartAt(Date.now())
       try {
@@ -284,7 +343,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
           if (skillScope === 'project') {
             const targetProjects = Array.from(
               new Set(
-                matchingTargets
+                suiteTargets
                   .map((target) => target.project_path)
                   .filter((path): path is string => Boolean(path)),
               ),
@@ -356,6 +415,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
       }
     },
     [
+      get,
       getSkillProjects,
       getSkillScope,
       loadManagedSkills,
@@ -407,6 +467,59 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
     void runToggleToolForSkill(payload.skill, payload.toolId)
   }, [pendingSharedToggle, runToggleToolForSkill])
 
+  // ─── Suite Sync Handlers ───────────────────
+  const handleSuiteSyncClose = useCallback(() => {
+    if (loading) return
+    setSuiteSyncState(null)
+  }, [loading])
+
+  const handleSuiteSyncConfirm = useCallback(
+    async (selectedSubpaths: string[]) => {
+      if (!suiteSyncState || loading) return
+      const { skill, toolId } = suiteSyncState
+      const toolLabel = tools.find((t) => t.id === toolId)?.label ?? toolId
+      const skillScope = getSkillScope(skill)
+      const projects = getSkillProjects(skill)
+
+      setLoading(true)
+      setLoadingStartAt(Date.now())
+      try {
+        setActionMessage(t('suiteSync.syncingSuite', { name: skill.name, tool: toolLabel }))
+        await post('sync_suite_to_tool', {
+          suite_skill_id: skill.id,
+          tool: toolId,
+          sub_skill_subpaths: selectedSubpaths,
+          scope: skillScope,
+          project_path: skillScope === 'project' ? projects[0] : undefined,
+        })
+        const msg = t('suiteSync.suiteSynced', { count: selectedSubpaths.length })
+        setActionMessage(msg)
+        setSuccessToastMessage(msg)
+        setActionMessage(null)
+        setSuiteSyncState(null)
+        await loadManagedSkills()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err))
+      } finally {
+        setLoading(false)
+        setLoadingStartAt(null)
+      }
+    },
+    [
+      suiteSyncState,
+      loading,
+      tools,
+      getSkillScope,
+      getSkillProjects,
+      post,
+      setActionMessage,
+      setSuccessToastMessage,
+      setError,
+      loadManagedSkills,
+      t,
+    ],
+  )
+
   // ─── Derived ────────────────────────────────
   const pendingSharedLabels = useMemo(() => {
     if (!pendingSharedToggle) return null
@@ -423,6 +536,11 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
     if (!scopeModalSkill) return null
     return managedSkills.find((skill) => skill.id === scopeModalSkill.id) ?? scopeModalSkill
   }, [managedSkills, scopeModalSkill])
+
+  const suiteSyncToolLabel = useMemo(() => {
+    if (!suiteSyncState) return ''
+    return tools.find((t) => t.id === suiteSyncState.toolId)?.label ?? suiteSyncState.toolId
+  }, [suiteSyncState, tools])
 
   return {
     scopeModalSkill,
@@ -443,5 +561,9 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
     handleSharedConfirm,
     pendingSharedLabels,
     currentScopeModalSkill,
+    suiteSyncState,
+    suiteSyncToolLabel,
+    handleSuiteSyncClose,
+    handleSuiteSyncConfirm,
   }
 }

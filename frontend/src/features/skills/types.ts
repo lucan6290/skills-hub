@@ -69,6 +69,13 @@ export type ManagedSkill = {
   skill_dir_size?: number | null
   usage?: SkillUsage[] | null
   sort_order: number
+  is_suite?: boolean
+}
+
+export interface SuiteSubSkill {
+  name: string
+  subpath: string
+  description?: string | null
 }
 
 export interface SkillUsage {

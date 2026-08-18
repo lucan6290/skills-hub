@@ -52,3 +52,16 @@ def is_suite_dir(path: str | Path) -> bool:
     if len(children) < 2:
         return False
     return all(is_skill_dir(c) for c in children)
+
+
+def has_sub_skills(path: str | Path) -> bool:
+    """检测目录是否包含子 skill（无论自身是否有 SKILL.md）。"""
+    from core.skills.installer import is_skill_dir
+
+    p = Path(path)
+    if not p.is_dir():
+        return False
+    for child in p.iterdir():
+        if child.is_dir() and is_skill_dir(child):
+            return True
+    return False
