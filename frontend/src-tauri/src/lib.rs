@@ -1,7 +1,15 @@
 pub mod commands;
+pub mod config;
 pub mod contracts;
+pub mod db;
 pub mod error;
+pub mod filesystem;
+pub mod models;
+pub mod platform;
+pub mod repositories;
+pub mod skills;
 pub mod state;
+pub mod utils;
 
 use tauri::Manager;
 
@@ -15,7 +23,9 @@ pub fn run() {
             }
         }))
         .manage(state::AppState::default())
-        .invoke_handler(tauri::generate_handler![crate::commands::health::health_check])
+        .invoke_handler(tauri::generate_handler![
+            crate::commands::health::health_check
+        ])
         .run(tauri::generate_context!())
         .expect("failed to run Skills Hub");
 }
