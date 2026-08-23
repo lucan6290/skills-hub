@@ -16,7 +16,7 @@ import {
   X,
 } from 'lucide-react'
 import type { TFunction } from 'i18next'
-import { apiCall, apiGet, reorder as apiReorder } from '@/lib/api'
+import { invokeCommand, reorder as apiReorder } from '@/lib/api'
 import { pickFolder } from '@/lib/pickFolder'
 import { toast } from 'sonner'
 
@@ -79,7 +79,7 @@ const ToolsPage = ({ t }: ToolsPageProps) => {
 
   const loadAdapterConfigs = useCallback(async () => {
     try {
-      const data = await apiGet<ToolAdapterConfig[]>('get_tool_adapter_configs')
+      const data = await invokeCommand<ToolAdapterConfig[]>('get_tool_adapter_configs')
       setAdapterConfigs(data)
     } catch {
       setAdapterConfigs([])
@@ -93,7 +93,7 @@ const ToolsPage = ({ t }: ToolsPageProps) => {
       setLoading(true)
     }
     try {
-      const data = await apiGet<ToolSkillsResponse[]>(
+      const data = await invokeCommand<ToolSkillsResponse[]>(
         'get_tool_skills',
         refresh ? { refresh: true } : undefined,
       )
@@ -121,7 +121,7 @@ const ToolsPage = ({ t }: ToolsPageProps) => {
   const handleSyncToCommunity = useCallback(async (skillPath: string, skillName: string) => {
     setSyncing(skillPath)
     try {
-      const result = await apiCall<{ ok: boolean; name: string }>('skill_to_community_repo', {
+      const result = await invokeCommand<{ ok: boolean; name: string }>('skill_to_community_repo', {
         source_path: skillPath,
         name: skillName,
       })
@@ -141,7 +141,7 @@ const ToolsPage = ({ t }: ToolsPageProps) => {
     if (!window.confirm(msg)) return
     setDeleting(skillPath)
     try {
-      await apiCall('delete_tool_skill', { tool_key: toolKey, skill_path: skillPath })
+      await invokeCommand('delete_tool_skill', { tool_key: toolKey, skill_path: skillPath })
       toast.success(t('toolsPage.deleted', { name: skillName }))
       void loadTools()
     } catch (err) {
@@ -155,7 +155,7 @@ const ToolsPage = ({ t }: ToolsPageProps) => {
     if (!window.confirm(t('toolsPage.confirmClearTool', { name: toolName, count }))) return
     setClearingTool(toolKey)
     try {
-      const result = await apiCall<{ ok: boolean; removed: number }>('clear_tool_skills', { tool_key: toolKey })
+      const result = await invokeCommand<{ ok: boolean; removed: number }>('clear_tool_skills', { tool_key: toolKey })
       toast.success(t('toolsPage.clearedTool', { name: toolName, count: result.removed }))
       void loadTools()
     } catch (err) {
@@ -167,7 +167,7 @@ const ToolsPage = ({ t }: ToolsPageProps) => {
 
   const handleOpenFolder = useCallback(async (toolKey: string, toolName: string) => {
     try {
-      await apiCall<{ ok: boolean; path: string }>('open_tool_skills_dir', { tool_key: toolKey })
+      await invokeCommand<{ ok: boolean; path: string }>('open_tool_skills_dir', { tool_key: toolKey })
       toast.success(t('toolsPage.openedFolder', { name: toolName }))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err))
@@ -197,7 +197,7 @@ const ToolsPage = ({ t }: ToolsPageProps) => {
     if (!editingConfig) return
     setSavingConfig(true)
     try {
-      await apiCall('save_tool_adapter_config', {
+      await invokeCommand('save_tool_adapter_config', {
         tool_key: editingConfig.tool_key,
         display_name: editingConfig.display_name,
         skills_dir: editingConfig.skills_dir,
@@ -228,7 +228,7 @@ const ToolsPage = ({ t }: ToolsPageProps) => {
     if (!window.confirm(message)) return
     setSavingConfig(true)
     try {
-      await apiCall('reset_tool_adapter_config', { tool_key: editingConfig.tool_key })
+      await invokeCommand('reset_tool_adapter_config', { tool_key: editingConfig.tool_key })
       toast.success(editingConfig.is_custom ? t('toolsPage.customToolDeleted') : t('toolsPage.configReset'))
       setEditingConfig(null)
       await loadAdapterConfigs()

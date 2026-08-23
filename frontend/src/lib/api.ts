@@ -1,63 +1,60 @@
 /**
  * Skills Hub 前端 API 适配层
- * 替代 invokeTauri，通过 HTTP 调用 Python 后端
+ * 通过 Tauri invoke 调用 Rust 后端
  *
  * 命名规范：所有参数直接使用 snake_case，与后端字段名完全一致，禁止转换。
  */
+import { invoke } from '@tauri-apps/api/core'
 import type { ManagedSkill } from '@/features/skills'
 
-const API_BASE = ''
+/**
+ * 统一 Tauri invoke transport。
+ * 将 Rust AppError 转为前端 Error，保持与旧 HTTP 层一致的异常语义。
+ */
+export async function invokeCommand<T = unknown>(
+  command: string,
+  params?: Record<string, unknown>,
+): Promise<T> {
+  try {
+    // Tauri invoke 的参数直接传递，不需要 JSON 序列化
+    const result = await invoke<T>(command, params)
+    return result
+  } catch (err) {
+    // Rust AppError 序列化为字符串或对象
+    if (typeof err === 'string') {
+      throw new Error(err)
+    }
+    if (err instanceof Error) {
+      throw err
+    }
+    // 尝试从 Rust 错误对象中提取 message
+    if (typeof err === 'object' && err !== null) {
+      const obj = err as Record<string, unknown>
+      const message = (obj.message ?? obj.detail ?? JSON.stringify(err)) as string
+      throw new Error(message)
+    }
+    throw new Error(String(err))
+  }
+}
 
+/**
+ * @deprecated 使用 invokeCommand 替代。保留仅为兼容过渡期。
+ */
 export async function apiCall<T = unknown>(
   command: string,
   params?: Record<string, unknown>,
 ): Promise<T> {
-  const body = Array.isArray(params)
-    ? JSON.stringify(params)
-    : params
-      ? JSON.stringify(params)
-      : undefined
-
-  const res = await fetch(`${API_BASE}/api/${command}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body,
-  })
-
-  if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}))
-    const message =
-      errBody.detail || errBody.message || `API error ${res.status}`
-    throw new Error(message)
-  }
-
-  return res.json() as Promise<T>
+  return invokeCommand<T>(command, params)
 }
 
-/** GET 请求变体 */
+/**
+ * @deprecated 使用 invokeCommand 替代。Tauri invoke 不区分 GET/POST。
+ */
 export async function apiGet<T = unknown>(
   command: string,
   params?: Record<string, unknown>,
 ): Promise<T> {
-  const query = params
-    ? `?${new URLSearchParams(
-        Object.fromEntries(
-          Object.entries(params)
-            .filter(([, value]) => value !== undefined && value !== null)
-            .map(([key, value]) => [key, String(value)]),
-        ),
-      )}`
-    : ''
-  const res = await fetch(`${API_BASE}/api/${command}${query}`)
-
-  if (!res.ok) {
-    const errBody = await res.json().catch(() => ({}))
-    const message =
-      errBody.detail || errBody.message || `API error ${res.status}`
-    throw new Error(message)
-  }
-
-  return res.json() as Promise<T>
+  return invokeCommand<T>(command, params)
 }
 
 export interface ScopePreferenceDto {
@@ -87,11 +84,11 @@ export async function reorder(
   entity: 'skills' | 'tags' | 'tools',
   items: ReorderItem[],
 ): Promise<void> {
-  await apiCall('reorder', { entity, items })
+  await invokeCommand('reorder', { entity, items })
 }
 
 export async function fetchScopePreferences(): Promise<ScopePreferenceDto[]> {
-  return apiGet<ScopePreferenceDto[]>('get_scope_preferences')
+  return invokeCommand<ScopePreferenceDto[]>('get_scope_preferences')
 }
 
 export async function saveScopePreference(
@@ -99,32 +96,32 @@ export async function saveScopePreference(
   scope: string,
   project_paths: string,
 ): Promise<void> {
-  await apiCall('set_scope_preference', { skill_id, scope, project_paths })
+  await invokeCommand('set_scope_preference', { skill_id, scope, project_paths })
 }
 
 /** 获取 skill 的标签列表 */
 export async function fetchSkillTags(skill_id: string): Promise<TagDto[]> {
-  return apiGet<TagDto[]>('get_skill_tags', { skill_id })
+  return invokeCommand<TagDto[]>('get_skill_tags', { skill_id })
 }
 
 /** 列出 skill 的文件 */
 export async function fetchSkillFiles(skill_id: string): Promise<SkillFileEntry[]> {
-  return apiGet<SkillFileEntry[]>('list_skill_files', { skill_id })
+  return invokeCommand<SkillFileEntry[]>('list_skill_files', { skill_id })
 }
 
 /** 读取 skill 的单个文件内容 */
 export async function fetchSkillFileContent(skill_id: string, file_path: string): Promise<string> {
-  return apiGet<string>('read_skill_file', { skill_id, file_path })
+  return invokeCommand<string>('read_skill_file', { skill_id, file_path })
 }
 
 /** 保存 skill 的单个文件内容 */
 export async function saveSkillFileContent(skill_id: string, file_path: string, content: string): Promise<void> {
-  await apiCall('write_skill_file', { skill_id, file_path, content })
+  await invokeCommand('write_skill_file', { skill_id, file_path, content })
 }
 
 /** 更新 skill 的 source_url（来源地址，支持多行） */
 export async function updateSkillSourceUrl(skill_id: string, source_url: string | null): Promise<ManagedSkill> {
-  return apiCall<ManagedSkill>('update_skill_source_url', { skill_id, source_url })
+  return invokeCommand<ManagedSkill>('update_skill_source_url', { skill_id, source_url })
 }
 
 // ── 数据库管理 ─────────────────────────────────────────
@@ -180,7 +177,7 @@ export interface DbMaintenanceResult {
 }
 
 export async function fetchDbOverview(): Promise<DbOverview> {
-  return apiGet<DbOverview>('db/overview')
+  return invokeCommand<DbOverview>('db_overview')
 }
 
 export async function fetchDbTableData(
@@ -193,23 +190,27 @@ export async function fetchDbTableData(
     filter_text?: string | null
   } = {},
 ): Promise<DbTableData> {
-  return apiGet<DbTableData>(`db/table/${table_name}`, params)
+  return invokeCommand<DbTableData>('db_table_data', { table_name, ...params })
 }
 
 export async function runDbMaintenance(action: string): Promise<DbMaintenanceResult> {
-  return apiCall<DbMaintenanceResult>('db/maintenance', { action })
+  return invokeCommand<DbMaintenanceResult>('db_maintenance', { action })
 }
 
 export async function resetDb(confirm_text: string): Promise<{ ok: boolean; message: string }> {
-  return apiCall('db/reset', { confirm_text })
+  return invokeCommand('db_reset', { confirm_text })
 }
 
-export function getDbExportUrl(): string {
-  return `/api/db/export`
+/**
+ * 导出数据库。Tauri 模式下通过 Rust command 触发文件保存对话框 + 复制。
+ * 返回导出结果信息。
+ */
+export async function exportDb(): Promise<{ ok: boolean; message: string; path?: string }> {
+  return invokeCommand('db_export')
 }
 
 export async function openDbFolder(): Promise<{ ok: boolean; message: string }> {
-  return apiCall('db/open_folder', {})
+  return invokeCommand('db_open_folder')
 }
 
 // ── 更新检查 ───────────────────────────────────────────
@@ -236,17 +237,17 @@ export interface PerformUpdateResult {
 }
 
 export async function checkUpdate(): Promise<CheckUpdateResult> {
-  return apiGet<CheckUpdateResult>('check_update')
+  return invokeCommand<CheckUpdateResult>('check_update')
 }
 
 export async function performUpdate(): Promise<PerformUpdateResult> {
-  return apiCall<PerformUpdateResult>('perform_update')
+  return invokeCommand<PerformUpdateResult>('do_update')
 }
 
 export async function getAutoCheckUpdate(): Promise<boolean> {
-  return apiGet<boolean>('get_auto_check_update')
+  return invokeCommand<boolean>('get_auto_check_update')
 }
 
 export async function setAutoCheckUpdate(enabled: boolean): Promise<void> {
-  await apiCall('set_auto_check_update', { enabled })
+  await invokeCommand('set_auto_check_update', { enabled })
 }

@@ -26,7 +26,7 @@ import {
   fetchDbTableData,
   runDbMaintenance,
   resetDb,
-  getDbExportUrl,
+  exportDb,
   openDbFolder,
   type DbOverview,
   type DbTableData,
@@ -194,9 +194,18 @@ const DatabasePanel = ({ t }: DatabasePanelProps) => {
     }
   }, [resetConfirm, t, loadOverview])
 
-  const handleExport = useCallback(() => {
-    window.open(getDbExportUrl(), '_blank')
-  }, [])
+  const handleExport = useCallback(async () => {
+    try {
+      const result = await exportDb()
+      if (result.ok) {
+        toast.success(result.message || t('db.exportSuccess'))
+      } else {
+        toast.error(result.message || 'Export failed')
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Export failed')
+    }
+  }, [t])
 
   const handleCopyPath = useCallback(async () => {
     if (!overview?.db_path) return

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { TFunction } from 'i18next'
-import { apiGet, reorder as apiReorder, updateSkillSourceUrl } from '@/lib/api'
+import { invokeCommand, reorder as apiReorder, updateSkillSourceUrl } from '@/lib/api'
 import { useApi } from '@/hooks/useApi'
 import type {
   ManagedSkill,
@@ -41,7 +41,7 @@ export function useSkills(
         ...(sourceType ? { source_type: sourceType } : {}),
         ...(sort ? { sort } : {}),
       }
-      const result = await apiGet<ManagedSkill[]>(
+      const result = await invokeCommand<ManagedSkill[]>(
         'get_managed_skills',
         Object.keys(params).length > 0 ? params : undefined,
       )
@@ -80,7 +80,7 @@ export function useSkills(
 
   const loadToolSkills = useCallback(async (refresh = false) => {
     try {
-      const result = await apiGet<ToolSkillSnapshot[]>(
+      const result = await invokeCommand<ToolSkillSnapshot[]>(
         'get_tool_skills',
         refresh ? { refresh: true } : undefined,
       )
@@ -107,11 +107,11 @@ export function useSkills(
     if (refreshingSkills) return
     setRefreshingSkills(true)
     try {
-      const toolSkillsPromise = apiGet<ToolSkillSnapshot[]>('get_tool_skills', { refresh: true })
+      const toolSkillsPromise = invokeCommand<ToolSkillSnapshot[]>('get_tool_skills', { refresh: true })
       const [skills, tagResult, status, toolSkills] = await Promise.all([
-        apiGet<ManagedSkill[]>('get_managed_skills', { refresh: true, source_type: sourceType }),
-        apiGet<TagWithCountDto[]>('get_tags', { source_type: sourceType }),
-        apiGet<ToolStatusDto>('get_tool_status'),
+        invokeCommand<ManagedSkill[]>('get_managed_skills', { refresh: true, source_type: sourceType }),
+        invokeCommand<TagWithCountDto[]>('get_tags', { source_type: sourceType }),
+        invokeCommand<ToolStatusDto>('get_tool_status'),
         toolSkillsPromise,
       ])
       setManagedSkills(skills)

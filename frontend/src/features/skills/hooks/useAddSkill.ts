@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import type { TFunction } from 'i18next'
-import { apiCall, apiGet } from '@/lib/api'
+import { invokeCommand } from '@/lib/api'
 import { useApi } from '@/hooks/useApi'
 import { pickFolder } from '@/lib/pickFolder'
 import type {
@@ -69,7 +69,7 @@ export function useAddSkill(deps: UseAddSkillDeps) {
     setShowAddModal(true)
     setAddSourceType(sourceType)
     setAddModalTagIds([])
-    apiGet<string[]>('get_default_sync_tools')
+    invokeCommand<string[]>('get_default_sync_tools')
       .then((ids) => {
         if (ids.length > 0) {
           setSyncTargets((prev) => {
@@ -229,7 +229,7 @@ export function useAddSkill(deps: UseAddSkillDeps) {
         setShowAddModal(false)
         // 保存默认同步工具选择
         const selectedKeys = Object.keys(syncTargets).filter((k) => syncTargets[k])
-        apiCall('save_default_sync_tools', selectedKeys as unknown as Record<string, unknown>).catch((err) => {
+        invokeCommand('save_default_sync_tools', { tools: selectedKeys }).catch((err) => {
           console.warn('Failed to save default sync tools:', err)
         })
         await loadManagedSkills()
