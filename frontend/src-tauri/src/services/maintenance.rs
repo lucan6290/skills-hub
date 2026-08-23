@@ -1,4 +1,4 @@
-//! Maintenance service — mirrors `backend/core/skills/maintenance.py`.
+//! Maintenance service.
 //!
 //! Provides sync health scanning, repair operations, and cache cleanup.
 

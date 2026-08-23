@@ -1,4 +1,4 @@
-//! Tool skill cache — mirrors `backend/core/tools/skill_cache.py`.
+//! Tool skill cache.
 //!
 //! Scans tool skills directories, builds cache entries, and manages
 //! the tool_skill_cache database table.

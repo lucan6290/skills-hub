@@ -1,4 +1,4 @@
-//! Skill file listing, reading and writing — mirrors `backend/core/skills/files.py`.
+//! Skill file listing, reading and writing.
 
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -15,8 +15,6 @@ pub struct FileEntry {
 }
 
 /// List files in a skill directory, sorted with SKILL.md first.
-///
-/// Mirrors Python `list_files(community_path)`.
 pub fn list_files(community_path: impl AsRef<Path>) -> Result<Vec<FileEntry>, String> {
     let base = community_path.as_ref();
     if !base.is_dir() {
@@ -74,8 +72,6 @@ fn collect_files(base: &Path, current: &Path, entries: &mut Vec<FileEntry>) -> R
 }
 
 /// Read a file from a skill directory with path traversal protection and size limit.
-///
-/// Mirrors Python `read_file(community_path, relative_path)`.
 pub fn read_file(community_path: impl AsRef<Path>, relative_path: &str) -> Result<String, String> {
     let base = canonicalize_safe(community_path.as_ref())?;
     let target = canonicalize_safe_join(&base, relative_path)?;
@@ -101,7 +97,6 @@ pub fn read_file(community_path: impl AsRef<Path>, relative_path: &str) -> Resul
     String::from_utf8(content)
         .map_err(|_| format!("file is not valid UTF-8: {}", relative_path))
         .or_else(|_| {
-            // Fallback: replace invalid chars (matching Python errors="replace")
             let bytes = std::fs::read(&target).unwrap_or_default();
             Ok(String::from_utf8_lossy(&bytes).to_string())
         })
@@ -109,7 +104,7 @@ pub fn read_file(community_path: impl AsRef<Path>, relative_path: &str) -> Resul
 
 /// Write content to a file in a skill directory with path traversal protection.
 ///
-/// Only allows writing to existing files. Mirrors Python `write_file`.
+/// Only allows writing to existing files.
 pub fn write_file(
     community_path: impl AsRef<Path>,
     relative_path: &str,

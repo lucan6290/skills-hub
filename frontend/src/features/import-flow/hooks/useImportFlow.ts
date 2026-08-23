@@ -43,7 +43,7 @@ export function useImportFlow(deps: UseImportFlowDeps) {
     setSuccessToastMessage,
   } = deps
 
-  const { get, post } = useApi()
+  const { invoke } = useApi()
   const [plan, setPlan] = useState<OnboardingPlan | null>(null)
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const [variantChoice, setVariantChoice] = useState<Record<string, string>>({})
@@ -55,7 +55,7 @@ export function useImportFlow(deps: UseImportFlowDeps) {
     if (showLoading) setLoading(true)
     setLoadingStartAt(showLoading ? Date.now() : null)
     try {
-      const result = await get<OnboardingPlan>('get_onboarding_plan')
+      const result = await invoke<OnboardingPlan>('get_onboarding_plan')
       setPlan(result)
       const defaultSelected: Record<string, boolean> = {}
       const defaultChoice: Record<string, string> = {}
@@ -76,7 +76,7 @@ export function useImportFlow(deps: UseImportFlowDeps) {
       if (showLoading) setLoading(false)
       setLoadingStartAt(null)
     }
-  }, [get, setError])
+  }, [invoke, setError])
 
   // 初始加载 plan
   useEffect(() => {
@@ -158,7 +158,7 @@ export function useImportFlow(deps: UseImportFlowDeps) {
 
         try {
           setActionMessage(t('actions.importExisting', { name: group.name }))
-          installResult = await post<{
+          installResult = await invoke<{
             skill_id: string
             community_path: string
           }>('import_existing_skill', {
@@ -202,7 +202,7 @@ export function useImportFlow(deps: UseImportFlowDeps) {
                 (chosenVariantTool === tool.id || sharedToolIds.includes(chosenVariantTool))) ||
                 hasSameContentVariant,
             )
-            await post('sync_skill_to_tool', {
+            await invoke('sync_skill_to_tool', {
               source_path: installResult.community_path,
               skill_id: installResult.skill_id,
               tool: tool.id,
@@ -263,7 +263,7 @@ export function useImportFlow(deps: UseImportFlowDeps) {
     loadManagedSkills,
     loadPlan,
     showActionErrors,
-    post,
+    invoke,
     setActionMessage,
     setError,
     setSuccessToastMessage,
@@ -271,11 +271,11 @@ export function useImportFlow(deps: UseImportFlowDeps) {
   ])
 
   const handleCancelLoading = useCallback(() => {
-    void post('cancel_current_operation').catch(() => {})
+    void invoke('cancel_current_operation').catch(() => {})
     setLoading(false)
     setLoadingStartAt(null)
     setActionMessage(null)
-  }, [post, setActionMessage])
+  }, [invoke, setActionMessage])
 
   return {
     plan,

@@ -70,4 +70,7 @@ ehthumbs.db
 # Personal docs
 lucan-docs/
 
+# Rust/Tauri build artifacts
+frontend/src-tauri/target/
+
 backend/static/

@@ -1,6 +1,6 @@
-//! SHA256 directory content hash — mirrors `backend/core/utils/content_hash.py`.
+//! SHA256 directory content hash.
 //!
-//! The algorithm must produce identical output to the Python implementation:
+//! The algorithm produces deterministic output:
 //! - Sorted traversal (by relative path, POSIX separators)
 //! - UTF-8 encoded relative paths
 //! - File contents read as raw bytes
@@ -13,8 +13,6 @@ use std::path::Path;
 use super::IGNORE_NAMES;
 
 /// Compute a SHA256 hash of a directory's contents.
-///
-/// Mirrors Python `hash_dir(path)`.
 pub fn hash_dir(path: impl AsRef<Path>) -> Result<String, String> {
     let base = path.as_ref();
     if !base.is_dir() {
@@ -28,7 +26,6 @@ pub fn hash_dir(path: impl AsRef<Path>) -> Result<String, String> {
         let rel = entry
             .strip_prefix(base)
             .map_err(|e| format!("strip prefix failed: {}", e))?;
-        // Use POSIX separators (forward slashes), matching Python `.as_posix()`
         let rel_str = rel.to_string_lossy().replace('\\', "/");
         hasher.update(rel_str.as_bytes());
         if entry.is_file() && !entry.is_symlink() {
@@ -43,8 +40,6 @@ pub fn hash_dir(path: impl AsRef<Path>) -> Result<String, String> {
 }
 
 /// Recursively collect file paths under `base`, sorted, skipping ignored names and symlinks.
-///
-/// Mirrors Python `_walk(base)`.
 fn walk_sorted(base: &Path) -> Result<Vec<std::path::PathBuf>, String> {
     let mut result = Vec::new();
     walk_recursive(base, &mut result)?;

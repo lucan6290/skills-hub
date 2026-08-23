@@ -15,7 +15,7 @@ export function useTheme(
   loadManagedSkills: (refresh?: boolean, sourceType?: 'custom' | 'community') => Promise<void>,
   setError: (msg: string) => void,
 ) {
-  const { get, post } = useApi()
+  const { invoke } = useApi()
   const [themePreference, setThemePreference] = useState<'system' | 'light' | 'dark'>(() => {
     if (typeof window === 'undefined') return 'system'
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY)
@@ -64,17 +64,17 @@ export function useTheme(
 
   // 初始化 storage path
   useEffect(() => {
-    get<string>('get_community_repo_path')
+    invoke<string>('get_community_repo_path')
       .then((path) => setStoragePath(path))
       .catch((err) => {
         setError(err instanceof Error ? err.message : String(err))
       })
-    get<string>('get_custom_repo_path')
+    invoke<string>('get_custom_repo_path')
       .then((path) => setCustomRepoPath(path))
       .catch((err) => {
         setError(err instanceof Error ? err.message : String(err))
       })
-  }, [get, setError])
+  }, [invoke, setError])
 
   const handleThemeChange = useCallback(
     (nextTheme: 'system' | 'light' | 'dark') => {
@@ -87,20 +87,20 @@ export function useTheme(
     try {
       const path = await pickFolder(t('enterStoragePath'))
       if (!path) return
-      const result = await post<{ new_path: string }>('set_community_repo_path', { path })
+      const result = await invoke<{ new_path: string }>('set_community_repo_path', { path })
       setStoragePath(result.new_path)
       await loadManagedSkills()
       toast.success(t('settings.saved'))
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     }
-  }, [loadManagedSkills, post, setError, t])
+  }, [invoke, loadManagedSkills, setError, t])
 
   const handlePickCustomRepoPath = useCallback(async () => {
     try {
       const path = await pickFolder(t('enterCustomRepoPath'))
       if (!path) return
-      const result = await post<{ ok: boolean; path: string; empty?: boolean }>('set_custom_repo_path', { path })
+      const result = await invoke<{ ok: boolean; path: string; empty?: boolean }>('set_custom_repo_path', { path })
       setCustomRepoPath(result.path)
       await loadManagedSkills(true, 'custom')
       toast.success(t('settings.saved'))
@@ -108,24 +108,24 @@ export function useTheme(
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     }
-  }, [loadManagedSkills, post, setError, t])
+  }, [invoke, loadManagedSkills, setError, t])
 
   const handleOpenFolder = useCallback(async (path: string) => {
     try {
-      await post<{ ok: boolean }>('open_settings_folder', { path })
+      await invoke<{ ok: boolean }>('open_settings_folder', { path })
       toast.success(t('settings.openedFolder'))
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     }
-  }, [post, setError, t])
+  }, [invoke, setError, t])
 
   const handleResetDefaults = useCallback(async () => {
-    const result = await post<{ ok: boolean; community_repo_path: string; custom_repo_path: string }>(
+    const result = await invoke<{ ok: boolean; community_repo_path: string; custom_repo_path: string }>(
       'reset_general_settings',
     )
     setStoragePath(result.community_repo_path)
     setCustomRepoPath(result.custom_repo_path)
-  }, [post])
+  }, [invoke])
 
   return {
     themePreference,

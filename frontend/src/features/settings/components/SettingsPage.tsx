@@ -12,9 +12,11 @@ import {
   RotateCcw,
   X,
   Globe,
+  Power,
 } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import { toast } from 'sonner'
+import { enable, isEnabled, disable } from '@tauri-apps/plugin-autostart'
 import DatabasePanel from '@/features/database/components/DatabasePanel'
 import UpdatePanel from '@/features/settings/components/UpdatePanel'
 import { getProxyUrl, setProxyUrl } from '@/lib/api'

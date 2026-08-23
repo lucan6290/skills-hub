@@ -1,4 +1,4 @@
-//! Repository scanner — mirrors `backend/core/repo/scanner.py`.
+//! Repository scanner.
 //!
 //! Scans community and custom repos for skills, registers them in the database,
 //! and removes entries for skills that no longer exist on disk.

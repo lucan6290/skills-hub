@@ -27,7 +27,7 @@ export function useSkills(
   setError: (msg: string) => void,
   setSuccessToastMessage: (msg: string) => void,
 ) {
-  const { get } = useApi()
+  const { invoke } = useApi()
   const [managedSkills, setManagedSkills] = useState<ManagedSkill[]>([])
   const [tags, setTags] = useState<TagWithCountDto[]>([])
   const [toolStatus, setToolStatus] = useState<ToolStatusDto | null>(null)
@@ -57,7 +57,7 @@ export function useSkills(
         ...(sourceType ? { source_type: sourceType } : {}),
         ...(sort ? { sort } : {}),
       }
-      const result = await get<TagWithCountDto[]>(
+      const result = await invoke<TagWithCountDto[]>(
         'get_tags',
         Object.keys(params).length > 0 ? params : undefined,
       )
@@ -65,7 +65,7 @@ export function useSkills(
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     }
-  }, [get, setError])
+  }, [invoke, setError])
 
   const applyToolSkillSnapshots = useCallback((result: ToolSkillSnapshot[]) => {
     const next: Record<string, string[]> = {}
@@ -92,7 +92,7 @@ export function useSkills(
 
   const loadToolStatus = useCallback(async () => {
     try {
-      const status = await get<ToolStatusDto>('get_tool_status')
+      const status = await invoke<ToolStatusDto>('get_tool_status')
       setToolStatus(status)
       if (status.newly_installed.length > 0) {
         return status
@@ -101,7 +101,7 @@ export function useSkills(
       console.warn(err)
     }
     return undefined
-  }, [get])
+  }, [invoke])
 
   const handleRefreshSkills = useCallback(async (sourceType: 'custom' | 'community') => {
     if (refreshingSkills) return

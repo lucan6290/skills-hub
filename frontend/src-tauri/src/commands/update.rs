@@ -1,55 +1,51 @@
-﻿use tauri::{AppHandle, State};
+﻿use tauri::AppHandle;
+use tauri_plugin_updater::UpdaterExt;
 
-use crate::error::AppResult;
-use crate::repositories::SettingsRepository;
-use crate::state::AppState;
+use crate::error::{AppError, AppResult};
 use crate::update::{self, CheckUpdateResponse, PerformUpdateResponse};
 
-fn read_proxy_url(state: &AppState) -> Option<String> {
-    let repo = SettingsRepository::new(&state.db);
-    match repo.get("proxy_url") {
-        Ok(Some(val)) if !val.is_empty() => Some(val),
-        _ => None,
-    }
-}
-
+/// Check for updates via the GitHub Releases API (for display: version + release notes).
+///
+/// The actual install path is handled by the native `tauri-plugin-updater` in `do_update`.
 #[tauri::command(rename_all = "snake_case")]
-pub async fn check_update(app: AppHandle, state: State<'_, AppState>) -> AppResult<CheckUpdateResponse> {
+pub async fn check_update(app: AppHandle) -> AppResult<CheckUpdateResponse> {
     let current_version = app.package_info().version.to_string();
     let install_mode = detect_install_mode();
-    let proxy_url = read_proxy_url(&state);
 
-    let result = tokio_or_spawn(move || {
-        update::check_for_update(&current_version, &install_mode, proxy_url.as_deref())
-    });
+    let result = tokio_or_spawn(move || update::check_for_update(&current_version, &install_mode));
 
     Ok(result)
 }
 
+/// Download and install the latest update via the native `tauri-plugin-updater`.
+///
+/// Requires release infrastructure: a signed `latest.json` manifest hosted at the
+/// configured `plugins.updater.endpoints` URL and the matching public key in
+/// `plugins.updater.pubkey`. Until that is set up, this returns a graceful error.
 #[tauri::command(rename_all = "snake_case")]
-pub async fn do_update(app: AppHandle, state: State<'_, AppState>) -> AppResult<PerformUpdateResponse> {
-    let current_version = app.package_info().version.to_string();
-    let install_mode = detect_install_mode();
-    let install_mode2 = install_mode.clone();
-    let proxy_url = read_proxy_url(&state);
-    let proxy_url2 = proxy_url.clone();
+pub async fn do_update(app: AppHandle) -> AppResult<PerformUpdateResponse> {
+    let updater = app
+        .updater()
+        .map_err(|e| AppError::UpdateError(format!("updater 未配置: {e}")))?;
 
-    let check_result = tokio_or_spawn(move || {
-        update::check_for_update(&current_version, &install_mode, proxy_url.as_deref())
-    });
+    let update = updater
+        .check()
+        .await
+        .map_err(|e| AppError::UpdateError(format!("检查更新失败: {e}")))?;
 
-    if !check_result.update_available {
+    let Some(update) = update else {
         return Ok(PerformUpdateResponse {
             ok: false,
-            message: "no update available".to_string(),
+            message: "当前已是最新版本".to_string(),
         });
-    }
+    };
 
-    let result = tokio_or_spawn(move || {
-        update::perform_update(&install_mode2, &check_result.download_urls, proxy_url2.as_deref())
-    });
+    update
+        .download_and_install(|_chunk, _total| {}, || {})
+        .await
+        .map_err(|e| AppError::UpdateError(format!("下载/安装更新失败: {e}")))?;
 
-    Ok(result)
+    app.restart()
 }
 
 fn detect_install_mode() -> String {

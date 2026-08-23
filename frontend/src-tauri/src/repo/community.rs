@@ -1,4 +1,4 @@
-//! Community Repo path management — mirrors `backend/core/repo/community.py`.
+//! Community Repo path management.
 
 use std::path::PathBuf;
 

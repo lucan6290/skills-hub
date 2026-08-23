@@ -5,18 +5,14 @@ use std::path::Path;
 use std::process::Command;
 
 /// Create a Windows directory junction using `cmd /c mklink /J`.
-///
-/// Mirrors Python `_create_junction(source, target)`.
 pub fn create_junction(source: &Path, target: &Path) -> Result<(), String> {
     let source_str = source.to_string_lossy();
     let target_str = target.to_string_lossy();
 
-    // Path length check matching Python behavior
     if target_str.len() > 259 || source_str.len() > 259 {
         return Err("mklink /J failed: path too long".to_string());
     }
 
-    // Quote paths to handle special characters (matching Python behavior)
     let output = Command::new("cmd")
         .args([
             "/c",

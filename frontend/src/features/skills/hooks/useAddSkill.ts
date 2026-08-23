@@ -52,7 +52,7 @@ export function useAddSkill(deps: UseAddSkillDeps) {
     setSuccessToastMessage,
   } = deps
 
-  const { post } = useApi()
+  const { invoke } = useApi()
   const [showAddModal, setShowAddModal] = useState(false)
   const [addModalTagIds, setAddModalTagIds] = useState<number[]>([])
   const [addSourceType, setAddSourceType] = useState<'custom' | 'community'>('custom')
@@ -135,7 +135,7 @@ export function useAddSkill(deps: UseAddSkillDeps) {
     async (skillId: string, skillName: string) => {
       if (addModalTagIds.length === 0) return
       try {
-        await post('set_skill_tags', {
+        await invokeCommand('set_skill_tags', {
           skill_id: skillId,
           tag_ids: addModalTagIds,
         })
@@ -144,7 +144,7 @@ export function useAddSkill(deps: UseAddSkillDeps) {
         setError(t('tagsApplyFailed', { name: skillName }))
       }
     },
-    [addModalTagIds, post, setError, t],
+    [addModalTagIds, invokeCommand, setError, t],
   )
 
   const handleCreateLocal = useCallback(async () => {
@@ -157,7 +157,7 @@ export function useAddSkill(deps: UseAddSkillDeps) {
     setActionMessage(t('actions.creatingLocalSkill'))
     try {
       const basePath = localPath.trim()
-      const candidates = await post<LocalSkillCandidate[]>(
+      const candidates = await invokeCommand<LocalSkillCandidate[]>(
         'list_local_skills_cmd',
         { base_path: basePath },
       )
@@ -170,7 +170,7 @@ export function useAddSkill(deps: UseAddSkillDeps) {
           setError(t('errors.skillAlreadyExists', { name: desiredName }))
           return
         }
-        const created = await post<InstallResultDto>(
+        const created = await invoke<InstallResultDto>(
           'install_local_selection',
           {
             base_path: basePath,
@@ -200,7 +200,7 @@ export function useAddSkill(deps: UseAddSkillDeps) {
                 }),
               )
               try {
-                await post('sync_skill_to_tool', {
+                await invoke('sync_skill_to_tool', {
                   source_path: created.community_path,
                   skill_id: created.skill_id,
                   tool: tool.id,
@@ -261,7 +261,7 @@ export function useAddSkill(deps: UseAddSkillDeps) {
     loadTags,
     localName,
     localPath,
-    post,
+    invoke,
     setActionMessage,
     setError,
     setLoading,
@@ -326,7 +326,7 @@ export function useAddSkill(deps: UseAddSkillDeps) {
           }),
         )
         try {
-          const created = await post<InstallResultDto>(
+          const created = await invoke<InstallResultDto>(
             'install_local_selection',
             {
               base_path: localCandidatesBasePath,
@@ -354,7 +354,7 @@ export function useAddSkill(deps: UseAddSkillDeps) {
                 }),
               )
               try {
-                await post('sync_skill_to_tool', {
+                await invoke('sync_skill_to_tool', {
                   source_path: created.community_path,
                   skill_id: created.skill_id,
                   tool: tool.id,
@@ -410,7 +410,7 @@ export function useAddSkill(deps: UseAddSkillDeps) {
     localCandidates,
     localCandidatesBasePath,
     localName,
-    post,
+    invoke,
     setActionMessage,
     setError,
     setLoading,

@@ -37,26 +37,6 @@ export async function invokeCommand<T = unknown>(
   }
 }
 
-/**
- * @deprecated 使用 invokeCommand 替代。保留仅为兼容过渡期。
- */
-export async function apiCall<T = unknown>(
-  command: string,
-  params?: Record<string, unknown>,
-): Promise<T> {
-  return invokeCommand<T>(command, params)
-}
-
-/**
- * @deprecated 使用 invokeCommand 替代。Tauri invoke 不区分 GET/POST。
- */
-export async function apiGet<T = unknown>(
-  command: string,
-  params?: Record<string, unknown>,
-): Promise<T> {
-  return invokeCommand<T>(command, params)
-}
-
 export interface ScopePreferenceDto {
   skill_id: string
   scope: string

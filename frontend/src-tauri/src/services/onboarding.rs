@@ -1,4 +1,4 @@
-//! Onboarding service — mirrors `backend/core/skills/onboarding.py`.
+//! Onboarding service.
 //!
 //! Scans installed tools for existing skills, groups them by name,
 //! detects conflicts, and generates an onboarding plan.

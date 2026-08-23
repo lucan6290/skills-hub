@@ -1,4 +1,4 @@
-//! Tool adapter module — mirrors `backend/core/tools/adapters.py`.
+//! Tool adapter module.
 //!
 //! Provides tool configuration, path resolution, installation detection,
 //! and skill directory scanning for all 44 built-in AI tools.
@@ -151,7 +151,6 @@ pub fn supports_project_scope(adapter: &ToolAdapter) -> bool {
     if let Some(override_val) = adapter.supports_project_scope_override {
         return override_val;
     }
-    // hermes_agent defaults to false (matching Python behavior)
     adapter.tool_key != "hermes_agent"
 }
 
@@ -248,7 +247,6 @@ fn clean_windows_prefix(s: &str) -> String {
 }
 
 /// Scan a tool's skills directory for detected skills.
-/// Mirrors Python `scan_tool_dir`.
 pub fn scan_tool_dir(adapter: &ToolAdapter, dir_path: &str) -> Vec<DetectedSkill> {
     let mut results = Vec::new();
     let dir = Path::new(dir_path);

@@ -80,6 +80,8 @@ export const resources = {
         proxyDesc: 'Configure a proxy for update checks and downloads. Leave empty to use direct connection.',
         proxyPlaceholder: 'e.g. http://127.0.0.1:7890',
         proxyHint: 'Supports HTTP/HTTPS/SOCKS5 proxy formats (e.g. http://host:port).',
+        autostartTitle: 'Launch at Startup',
+        autostartDesc: 'Automatically start Skills Hub when you log in to your computer.',
       },
       update: {
         title: 'Update',
@@ -654,6 +656,8 @@ export const resources = {
         proxyDesc: '为检查更新和下载配置代理地址。留空则使用直连。',
         proxyPlaceholder: '例如 http://127.0.0.1:7890',
         proxyHint: '支持 HTTP/HTTPS/SOCKS5 代理格式（如 http://host:port）。',
+        autostartTitle: '开机启动',
+        autostartDesc: '登录电脑时自动启动 Skills Hub。',
       },
       update: {
         title: '更新',

@@ -1,4 +1,4 @@
-//! Path safety utilities — mirrors `backend/core/utils/path_safety.py`.
+//! Path safety utilities.
 
 use std::path::{Path, PathBuf};
 
@@ -9,8 +9,6 @@ const WINDOWS_RESERVED_NAMES: &[&str] = &[
 ];
 
 /// Return a single safe directory component derived from a display name.
-///
-/// Mirrors Python `safe_dir_name(name, fallback="skill")`.
 pub fn safe_dir_name(name: Option<&str>) -> String {
     safe_dir_name_with_fallback(name, "skill")
 }
@@ -60,15 +58,12 @@ pub fn safe_dir_name_with_fallback(name: Option<&str>, fallback: &str) -> String
 /// Normalize a path to an absolute, case-normalized form.
 ///
 /// On Windows this lowercases the path for case-insensitive comparison.
-/// Mirrors Python `norm_path`.
 pub fn norm_path(path: impl AsRef<Path>) -> String {
     let abs = std::path::absolute(path.as_ref()).unwrap_or_else(|_| path.as_ref().to_path_buf());
     normalize_case(&abs)
 }
 
 /// Lexical containment check without following the final symlink target.
-///
-/// Mirrors Python `is_path_within(path, base)`.
 pub fn is_path_within(path: impl AsRef<Path>, base: impl AsRef<Path>) -> bool {
     let candidate = match std::path::absolute(path.as_ref()) {
         Ok(p) => p,
@@ -97,8 +92,6 @@ pub fn is_path_within(path: impl AsRef<Path>, base: impl AsRef<Path>) -> bool {
 }
 
 /// Require that `path` is within `base`, returning an error otherwise.
-///
-/// Mirrors Python `require_path_within`.
 pub fn require_path_within(
     path: impl AsRef<Path>,
     base: impl AsRef<Path>,
@@ -117,8 +110,6 @@ pub fn require_path_within(
 }
 
 /// Join a child name to a base path and verify containment.
-///
-/// Mirrors Python `safe_child_path`.
 pub fn safe_child_path(
     base: impl AsRef<Path>,
     child_name: &str,
@@ -129,8 +120,6 @@ pub fn safe_child_path(
 }
 
 /// Expand `~` and `~/` to the user's home directory.
-///
-/// Mirrors Python `expand_home`.
 pub fn expand_home(input: &str) -> String {
     let p = input.trim();
     let home = dirs_or_fallback();

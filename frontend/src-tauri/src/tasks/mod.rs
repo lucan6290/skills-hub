@@ -1,4 +1,4 @@
-//! Task manager — mirrors `backend/core/tasks/manager.py`.
+//! Task manager.
 //!
 //! Provides a lightweight in-process task system for long-running operations.
 //! Tasks run on background threads and report progress via events.

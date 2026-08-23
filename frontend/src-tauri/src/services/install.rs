@@ -1,5 +1,4 @@
-//! Skill installation service — mirrors `backend/core/skills/installer.py` and
-//! `backend/core/skills/install_service.py`.
+//! Skill installation service.
 
 use std::path::Path;
 
@@ -48,7 +47,7 @@ pub struct LocalSkillCandidate {
     pub reason: Option<String>,
 }
 
-/// Known frontmatter keys matching Python KNOWN_FRONTMATTER_KEYS.
+/// Known frontmatter keys.
 const KNOWN_FRONTMATTER_KEYS: &[&str] = &[
     "name",
     "description",

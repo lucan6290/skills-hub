@@ -2,9 +2,7 @@
 
 > 中文 | [English](docs/README.en.md)
 
-一个跨平台桌面应用（React 19 + Python FastAPI），用于统一管理 AI Agent Skills，并把它们同步到多种 AI 编程工具的全局或项目级 skills 目录（优先 symlink/junction，失败回退 copy），实现 “Install once, sync everywhere”。
-
-支持浏览器模式和独立桌面窗口模式，可打包为单文件 exe。
+一个跨平台桌面应用（React 19 + Rust Tauri），用于统一管理 AI Agent Skills，并把它们同步到多种 AI 编程工具的全局或项目级 skills 目录（优先 symlink/junction，失败回退 copy），实现 "Install once, sync everywhere"。
 
 ## 主要功能
 
@@ -21,8 +19,7 @@
 ## 技术栈
 
 - **前端**：React 19 + TypeScript 5.9（严格模式）+ Vite 7 + Tailwind CSS 4
-- **后端**：Python 3.10+ + FastAPI + SQLite
-- **HTTP 通信**：`fetch` → Python 后端（`localhost:18921`）
+- **后端**：Rust + Tauri 2 + SQLite（rusqlite）
 - **i18n**：i18next（中英双语）
 
 ## 开发
@@ -30,75 +27,53 @@
 ### 环境要求
 
 - Node.js 18+（推荐 20+）
-- Python 3.10+（含 pip）
+- Rust 1.77+（stable）
+- [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/)
 
-### 浏览器模式
+### 开发模式
 
 ```bash
-# 后端（终端 1）
-cd backend
-pip install -r requirements.txt
-python main.py                 # FastAPI → http://localhost:18921
-
-# 前端（终端 2）
 cd frontend
 npm install
-npm run dev                    # Vite 开发服务器 → http://localhost:5173
+npm run tauri dev              # Vite HMR + Tauri 桌面窗口
 ```
 
-### 桌面窗口模式
+### 构建生产版本
 
 ```bash
-# 1. 构建前端
 cd frontend
-npm install
-npm run build                  # 输出到 frontend/dist/
-
-# 2. 启动桌面窗口（自动托管后端）
-cd ../backend
-pip install -r requirements.txt
-python desktop.py              # pywebview 原生窗口，无需浏览器
+npm run tauri build            # 输出 NSIS 安装包到 src-tauri/target/release/bundle/
 ```
 
-> 桌面模式使用 `pywebview` 创建独立窗口，后端自动在后台启动，无需单独运行 `python main.py`。
-
-### 打包为 exe
+### 质量检查
 
 ```bash
-# 在 backend/ 目录下执行
-python build.py                # 输出 SkillsHub.exe 到 dist/
-```
-
-> 打包前需先在 `frontend/` 执行 `npm run build`。`build.py` 会自动将前端静态文件打包进 exe。
-
-### 质量检查（在 `frontend/` 下）
-
-```bash
+cd frontend
 npm run lint            # ESLint
 npm run build           # tsc + vite build
 npm run check           # lint + build
 ```
 
-### 后端测试
+### Rust 测试
 
 ```bash
-cd backend
-python -m pytest        # 或：pytest
+cd frontend/src-tauri
+cargo test
 ```
 
 ### 版本管理
 
-项目版本号前后端统一管理，唯一需要手动维护的地方是通过脚本一键更新：
+项目版本号前后端统一管理，通过脚本一键更新：
 
 ```bash
 # 在项目根目录执行
 node scripts/version.mjs check              # 校验前后端版本一致
-node scripts/version.mjs set <x.y.z>        # 设置新版本号（同时更新前端 package.json 和后端 core/version.py）
+node scripts/version.mjs set <x.y.z>        # 设置新版本号（同时更新 package.json 和 Cargo.toml）
 ```
 
 版本号来源：
 - 前端：`frontend/package.json` 中的 `version`（Vite 构建时自动注入到前端代码）
-- 后端：`backend/core/version.py` 中的 `__version__`（FastAPI 和 health 接口使用）
+- 后端：`frontend/src-tauri/Cargo.toml` 中的 `version`
 - 两个文件通过 `scripts/version.mjs` 保证同步，请勿手动单独修改其中一个。
 
 ### 发布版本
@@ -152,21 +127,16 @@ skills-hub/
 │   ├── src/
 │   │   ├── lib/                    # api.ts、errors.ts、pickFolder.ts、utils.ts
 │   │   ├── hooks/                  # 自定义 hooks（useApi、useSkills、useScopeState 等）
-│   │   ├── context/                # React context（AppState、Modal）
-│   │   ├── components/skills/     # 技能相关组件（Header、FilterBar、SkillCard、SkillsList 等）
+│   │   ├── features/               # 功能模块（skills、settings、tools、tags、import-flow）
 │   │   └── i18n/                   # 中英文翻译
+│   ├── src-tauri/          # Rust Tauri 后端
+│   │   ├── src/
+│   │   │   ├── commands/           # Tauri command 入口
+│   │   │   ├── repositories/       # 数据库访问层
+│   │   │   ├── services/           # 业务逻辑
+│   │   │   └── update/             # 更新检查与执行
+│   │   └── Cargo.toml
 │   └── package.json
-├── backend/                # Python FastAPI 后端
-│   ├── main.py                     # FastAPI 入口（端口 18921）
-│   ├── desktop.py                  # pywebview 桌面窗口入口
-│   ├── build.py                    # PyInstaller 打包脚本
-│   ├── api/                        # 路由处理器（skills/、tools/、tags、settings、onboarding）
-│   ├── core/                       # 业务逻辑
-│   │   ├── db/store.py             # SQLite ORM（12 张表）
-│   │   ├── repo/                   # 双源头仓库（community、scanner、migration）
-│   │   ├── skills/                 # 技能操作（sync_engine、installer、files、source_paths）
-│   │   └── tools/                  # 工具适配器
-│   └── models/                     # Pydantic DTO
 ├── docs/                   # 文档
 ├── scripts/                # 构建与版本脚本
 └── README.md
@@ -237,7 +207,6 @@ skills-hub/
 - **什么是项目级同步？** Skill 仍然只在 Community Repo 中存储一次，但其同步目标是某个选定的项目目录，例如 `<project>/.agents/skills`、`<project>/.claude/skills` 或其他工具特定的项目 skills 路径。
 - **为什么同步到 Cursor 总是使用 copy？** Cursor 目前不支持基于 symlink/junction 的 skills 目录，因此 Skills Hub 在同步到 Cursor 时强制使用目录复制。
 - **为什么同步有时会回退到 copy？** Skills Hub 优先使用 symlink/junction，但在某些系统上（尤其是 Windows）symlink 可能受限，此时回退为目录复制。
-- **`TARGET_EXISTS|...` 是什么意思？** 目标文件夹已存在且操作未覆盖它（默认非破坏性）。请删除已有文件夹或使用相应的覆盖流程重试。
 
 ## 开源协议
 

@@ -55,8 +55,6 @@ pub fn list_files(dir: impl AsRef<Path>) -> Result<Vec<std::path::PathBuf>, Stri
 }
 
 /// Recursively copy a directory, skipping `.git` and symlinks.
-///
-/// Mirrors Python `copy_dir_recursive(source, target)`.
 pub fn copy_directory(source: impl AsRef<Path>, target: impl AsRef<Path>) -> Result<(), String> {
     let source = source.as_ref();
     let target = target.as_ref();
@@ -136,7 +134,6 @@ pub fn create_junction(source: impl AsRef<Path>, target: impl AsRef<Path>) -> Re
 /// Remove a file, directory, symlink, or junction.
 ///
 /// For links/junctions, only removes the reparse point itself — never follows into target.
-/// Mirrors Python `_remove_path_any`.
 pub fn remove_link_or_directory(path: impl AsRef<Path>) -> Result<(), String> {
     let path = path.as_ref();
     let is_link = platform::is_link_or_junction(path);

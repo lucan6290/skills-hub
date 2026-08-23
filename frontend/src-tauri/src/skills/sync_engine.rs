@@ -1,4 +1,4 @@
-//! Sync engine — mirrors `backend/core/skills/sync_engine.py`.
+//! Sync engine.
 //!
 //! Supports symlink → junction (Windows) → copy three-tier fallback.
 
@@ -38,8 +38,6 @@ pub struct SyncOutcome {
 }
 
 /// Sync using hybrid strategy: symlink → junction → copy.
-///
-/// Mirrors Python `sync_dir_hybrid(source, target)`.
 pub fn sync_dir_hybrid(
     source: impl AsRef<Path>,
     target: impl AsRef<Path>,
@@ -48,8 +46,6 @@ pub fn sync_dir_hybrid(
 }
 
 /// Sync with explicit overwrite control.
-///
-/// Mirrors Python `sync_dir_hybrid_with_overwrite(source, target, overwrite)`.
 pub fn sync_dir_hybrid_with_overwrite(
     source: impl AsRef<Path>,
     target: impl AsRef<Path>,
@@ -59,8 +55,6 @@ pub fn sync_dir_hybrid_with_overwrite(
 }
 
 /// Force copy mode sync.
-///
-/// Mirrors Python `sync_dir_copy_with_overwrite`.
 pub fn sync_dir_copy_with_overwrite(
     source: impl AsRef<Path>,
     target: impl AsRef<Path>,
@@ -85,8 +79,6 @@ pub fn sync_dir_copy_with_overwrite(
 }
 
 /// Tool-aware sync: uses force_copy flag to decide copy vs hybrid.
-///
-/// Mirrors Python `sync_dir_for_tool_with_overwrite`.
 pub fn sync_dir_for_tool_with_overwrite(
     _tool_key: &str,
     source: impl AsRef<Path>,
@@ -104,7 +96,6 @@ pub fn sync_dir_for_tool_with_overwrite(
 /// Remove a path that was previously synced (unsync).
 ///
 /// Only removes links/junctions/directories that are managed targets.
-/// Mirrors Python `_remove_path_any` used in unsync context.
 pub fn unsync_target(target: impl AsRef<Path>) -> Result<(), String> {
     filesystem::remove_link_or_directory(target)
 }
@@ -181,8 +172,6 @@ fn handle_existing_target(target: &Path, source: &Path, overwrite: bool) -> Resu
 }
 
 /// Check if two paths resolve to the same location.
-///
-/// Mirrors Python `_same_resolved_path`.
 fn same_resolved_path(left: &Path, right: &Path) -> bool {
     let left_real = resolve_norm(left);
     let right_real = resolve_norm(right);
