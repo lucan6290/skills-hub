@@ -15,7 +15,7 @@ pub fn run() {
             }
         }))
         .manage(state::AppState::default())
-        .invoke_handler(tauri::generate_handler![commands::health_check])
+        .invoke_handler(tauri::generate_handler![crate::commands::health::health_check])
         .run(tauri::generate_context!())
         .expect("failed to run Skills Hub");
 }
