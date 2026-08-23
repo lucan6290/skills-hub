@@ -31,6 +31,14 @@
     "active": true,
     "targets": ["nsis"],
     "icon": ["icons/icon.ico"],
+    "fileAssociations": [
+      {
+        "ext": ["skill"],
+        "name": "Skills Hub Skill",
+        "description": "Skills Hub skill package",
+        "role": "Editor"
+      }
+    ],
     "windows": {
       "nsis": {
         "installerIcon": "icons/icon.ico",
@@ -38,6 +46,19 @@
         "languages": ["SimpChinese", "English"],
         "displayLanguageSelector": true
       }
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["skillshub"]
+      }
+    },
+    "updater": {
+      "pubkey": "",
+      "endpoints": [
+        "https://github.com/lucan6290/skills-hub/releases/latest/download/latest.json"
+      ]
     }
   }
 }

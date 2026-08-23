@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Toaster } from 'sonner'
+import { getCurrent, onOpenUrl } from '@tauri-apps/plugin-deep-link'
 import { Header, LoadingOverlay } from '@/components/layout'
 import {
   FilterBar,
@@ -186,6 +187,41 @@ function AppContent() {
     void loadStatus()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ─── Deep Link handler (skillshub://) ──────────
+  useEffect(() => {
+    const handleDeepLink = (url: string) => {
+      // skillshub://skill/{id} → 打开 skill 详情
+      // skillshub://import → 打开导入界面
+      const match = url.match(/^skillshub:\/\/([^/]+)(?:\/(.+))?/)
+      if (!match) return
+      const [, action, param] = match
+      if (action === 'skill' && param) {
+        const skill = skills.managedSkills.find((s) => s.id === param)
+        if (skill) modal.openInfoModal(skill)
+      } else if (action === 'import') {
+        modal.handleViewChange('myskills')
+      }
+    }
+
+    // 处理启动时传入的 deep link
+    getCurrent()
+      .then((urls) => {
+        if (urls) {
+          for (const url of urls) handleDeepLink(url)
+        }
+      })
+      .catch(() => {})
+
+    // 监听后续 deep link 事件
+    const unlisten = onOpenUrl((urls) => {
+      for (const url of urls) handleDeepLink(url)
+    })
+
+    return () => {
+      void unlisten.then((fn) => fn())
+    }
+  }, [skills.managedSkills, modal])
 
   // ─── 计算衍生值 ────────────────────────────────
   const currentInfoModalSkill = useMemo(() => {

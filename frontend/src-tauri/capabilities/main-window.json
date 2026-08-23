@@ -1,7 +1,13 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-window",
-  "description": "Minimal core permissions for the bundled Skills Hub main window.",
+  "description": "Capabilities for the Skills Hub main window. Granular per-plugin permissions on top of core defaults.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default",
+    "autostart:default",
+    "deep-link:default",
+    "notification:default",
+    "updater:default"
+  ]
 }

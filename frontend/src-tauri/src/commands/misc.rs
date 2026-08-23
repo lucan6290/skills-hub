@@ -1,4 +1,4 @@
-﻿use tauri::State;
+﻿use tauri::{AppHandle, State, WebviewUrl, WebviewWindowBuilder};
 
 use crate::contracts::{PickFolderResult, ReorderItem};
 use crate::error::{AppError, AppResult};
@@ -78,4 +78,30 @@ pub async fn reorder(
         }
     }
     Ok(())
+}
+
+/// Create a secondary window loading the same frontend. Used by the tray menu and
+/// as an invoke command (`open_new_window`) to demonstrate multi-window support.
+pub fn create_new_window(app: &AppHandle) -> AppResult<()> {
+    let label = format!(
+        "window-{}",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis())
+            .unwrap_or(0)
+    );
+
+    WebviewWindowBuilder::new(app, &label, WebviewUrl::default())
+        .title("Skills Hub")
+        .inner_size(1200.0, 800.0)
+        .min_inner_size(900.0, 600.0)
+        .center()
+        .build()
+        .map_err(|e| AppError::Unexpected(e.to_string()))?;
+    Ok(())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn open_new_window(app: AppHandle) -> AppResult<()> {
+    create_new_window(&app)
 }

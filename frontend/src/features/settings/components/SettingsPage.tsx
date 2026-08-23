@@ -112,10 +112,41 @@ const SettingsPage = ({
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [proxyUrl, setProxyUrlState] = useState('')
   const [proxySaving, setProxySaving] = useState(false)
+  const [autostartEnabled, setAutostartEnabled] = useState(false)
+  const [autostartLoaded, setAutostartLoaded] = useState(false)
+  const [autostartSaving, setAutostartSaving] = useState(false)
 
   useEffect(() => {
     getProxyUrl().then(setProxyUrlState).catch(() => {})
   }, [])
+
+  useEffect(() => {
+    isEnabled()
+      .then((enabled) => {
+        setAutostartEnabled(enabled)
+        setAutostartLoaded(true)
+      })
+      .catch(() => setAutostartLoaded(true))
+  }, [])
+
+  const handleAutostartToggle = async () => {
+    if (!autostartLoaded || autostartSaving) return
+    const next = !autostartEnabled
+    setAutostartEnabled(next)
+    setAutostartSaving(true)
+    try {
+      if (next) {
+        await enable()
+      } else {
+        await disable()
+      }
+    } catch {
+      setAutostartEnabled(!next)
+      toast.error(t('settings.saveFailed'))
+    } finally {
+      setAutostartSaving(false)
+    }
+  }
 
   const handleSaveProxy = async () => {
     setProxySaving(true)
@@ -291,6 +322,30 @@ const SettingsPage = ({
                 </button>
               </div>
               <p className="settings-v2-card-note">{t('settings.proxyHint')}</p>
+            </section>
+
+            {/* Autostart Section */}
+            <section className="settings-v2-card">
+              <h3 className="settings-v2-section-title">
+                <Power size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
+                {t('settings.autostartTitle')}
+              </h3>
+              <p className="settings-v2-section-desc">{t('settings.autostartDesc')}</p>
+              <div className="settings-v2-item">
+                <div className="settings-v2-item-info">
+                  <div className="settings-v2-item-title">{t('settings.autostartTitle')}</div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={autostartEnabled}
+                  className={`settings-toggle ${autostartEnabled ? 'checked' : ''}`}
+                  onClick={handleAutostartToggle}
+                  disabled={!autostartLoaded || autostartSaving}
+                >
+                  <span className="settings-toggle-knob" />
+                </button>
+              </div>
             </section>
 
             {/* Reset to defaults */}
