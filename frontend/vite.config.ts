@@ -11,8 +11,11 @@ const pkg = JSON.parse(
   readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'package.json'), 'utf-8'),
 )
 
+const tauriDevHost = process.env.TAURI_DEV_HOST
+
 // https://vite.dev/config/
 export default defineConfig({
+  clearScreen: false,
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
@@ -61,8 +64,12 @@ export default defineConfig({
     },
   },
   server: {
+    host: tauriDevHost || '127.0.0.1',
     port: 5173,
     strictPort: true,
+    watch: {
+      ignored: ['**/src-tauri/**'],
+    },
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:18921',

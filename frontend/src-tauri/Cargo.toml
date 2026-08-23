@@ -1,0 +1,27 @@
+[package]
+name = "skills-hub"
+version = "0.1.1"
+description = "Skills Hub desktop application"
+authors = ["Skills Hub contributors"]
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "skills_hub_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "skills-hub"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "=2.6.3", features = [] }
+
+[dependencies]
+serde = { version = "=1.0.229", features = ["derive"] }
+tauri = { version = "=2.11.5", features = [] }
+tauri-plugin-single-instance = "=2.4.3"
+thiserror = "=2.0.20"
+
+[dev-dependencies]
+serde_json = "=1.0.145"

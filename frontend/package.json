@@ -8,10 +8,14 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "check": "npm run lint && npm run build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
+    "@tauri-apps/api": "2.11.1",
     "clsx": "^2.1.1",
     "i18next": "^25.7.4",
     "i18next-browser-languagedetector": "^8.2.0",
@@ -29,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
+    "@tauri-apps/cli": "2.11.4",
     "@types/node": "^24.10.7",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
