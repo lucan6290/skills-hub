@@ -54,7 +54,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
     setSuccessToastMessage,
   } = deps
 
-  const { get, post } = useApi()
+  const { invoke } = useApi()
   const [scopeModalSkill, setScopeModalSkill] = useState<ManagedSkill | null>(null)
   const [pendingSharedToggle, setPendingSharedToggle] = useState<{
     skill: ManagedSkill
@@ -75,10 +75,10 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
 
   // 加载最近项目
   useEffect(() => {
-    get<string[]>('get_recent_projects')
+    invoke<string[]>('get_recent_projects')
       .then((projects) => setRecentProjects(projects))
       .catch(() => {})
-  }, [get])
+  }, [invoke])
 
   // ─── Helpers ────────────────────────────────
   const getSkillScope = useCallback(
@@ -183,7 +183,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
           const key = `${target.tool}|${targetScope}|${target.project_path ?? ''}`
           if (seen.has(key)) continue
           seen.add(key)
-          await post('unsync_skill_from_tool', {
+          await invoke('unsync_skill_from_tool', {
             skill_id: skill.id,
             tool: target.tool,
             scope: targetScope,
@@ -193,7 +193,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
         if (nextScope === 'project' && projects.length > 0) {
           for (const toolId of installedProjectToolIds) {
             for (const projectPath of projects) {
-              await post('sync_skill_to_tool', {
+              await invoke('sync_skill_to_tool', {
                 source_path: skill.community_path,
                 skill_id: skill.id,
                 tool: toolId,
@@ -207,7 +207,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
         } else if (nextScope === 'global') {
           for (const toolId of installedToolIds) {
             try {
-              await post('sync_skill_to_tool', {
+              await invoke('sync_skill_to_tool', {
                 source_path: skill.community_path,
                 skill_id: skill.id,
                 tool: toolId,
@@ -226,7 +226,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
         await loadManagedSkills()
         if (nextScope === 'project') {
           for (const projectPath of projects) {
-            const saved = await post<string[]>('save_recent_project', { project_path: projectPath })
+            const saved = await invoke<string[]>('save_recent_project', { project_path: projectPath })
             setRecentProjects(saved)
           }
         }
@@ -252,7 +252,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
       installedProjectToolIds,
       loadManagedSkills,
       loading,
-      post,
+      invoke,
       scopeModalSkill,
       setError,
       setSkillScopeAndProjects,
@@ -286,7 +286,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
       // 检测是否为套件：尝试查询子 skill 列表
       if (!synced) {
         try {
-          const subs = await get<SuiteSubSkill[]>('list_suite_sub_skills', {
+          const subs = await invoke<SuiteSubSkill[]>('list_suite_sub_skills', {
             suite_skill_id: skill.id,
           })
           if (subs.length > 0) {
@@ -311,7 +311,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
         setLoadingStartAt(Date.now())
         try {
           setActionMessage(t('suiteSync.unsyncingSuite', { name: skill.name, tool: toolLabel }))
-          await post('unsync_suite_from_tool', {
+          await invoke('unsync_suite_from_tool', {
             suite_skill_id: skill.id,
             tool: toolId,
             scope: skillScope,
@@ -347,7 +347,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
               ),
             )
             for (const projectPath of targetProjects) {
-              await post('unsync_skill_from_tool', {
+              await invoke('unsync_skill_from_tool', {
                 skill_id: skill.id,
                 tool: toolId,
                 scope: 'project',
@@ -355,7 +355,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
               })
             }
           } else {
-            await post('unsync_skill_from_tool', {
+            await invoke('unsync_skill_from_tool', {
               skill_id: skill.id,
               tool: toolId,
               scope: 'global',
@@ -367,7 +367,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
           )
           if (skillScope === 'project') {
             for (const projectPath of projects) {
-              await post('sync_skill_to_tool', {
+              await invoke('sync_skill_to_tool', {
                 source_path: skill.community_path,
                 skill_id: skill.id,
                 tool: toolId,
@@ -378,7 +378,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
               })
             }
           } else {
-            await post('sync_skill_to_tool', {
+            await invoke('sync_skill_to_tool', {
               source_path: skill.community_path,
               skill_id: skill.id,
               tool: toolId,
@@ -413,12 +413,11 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
       }
     },
     [
-      get,
+      invoke,
       getSkillProjects,
       getSkillScope,
       loadManagedSkills,
       loading,
-      post,
       setActionMessage,
       setError,
       setSuccessToastMessage,
@@ -483,7 +482,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
       setLoadingStartAt(Date.now())
       try {
         setActionMessage(t('suiteSync.syncingSuite', { name: skill.name, tool: toolLabel }))
-        await post('sync_suite_to_tool', {
+        await invoke('sync_suite_to_tool', {
           suite_skill_id: skill.id,
           tool: toolId,
           sub_skill_subpaths: selectedSubpaths,
@@ -509,7 +508,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
       tools,
       getSkillScope,
       getSkillProjects,
-      post,
+      invoke,
       setActionMessage,
       setSuccessToastMessage,
       setError,
