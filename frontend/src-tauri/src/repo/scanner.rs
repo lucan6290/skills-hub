@@ -35,8 +35,8 @@ pub fn is_skill_dir(path: &Path) -> bool {
     false
 }
 
-/// Check if a directory is a suite (any child is a skill dir).
-fn is_skill_suite_dir(path: &Path) -> bool {
+/// Check if a directory contains sub skills (any child is a skill dir).
+pub fn has_sub_skills(path: &Path) -> bool {
     if let Ok(entries) = std::fs::read_dir(path) {
         for entry in entries.filter_map(|e| e.ok()) {
             if entry.file_type().map(|ft| ft.is_dir()).unwrap_or(false)
@@ -208,7 +208,7 @@ fn scan_and_register_repo(
         }
 
         let is_valid =
-            is_skill_dir(&item) || (source_type == "custom" && is_skill_suite_dir(&item));
+            is_skill_dir(&item) || (source_type == "custom" && has_sub_skills(&item));
 
         if !is_valid {
             continue;

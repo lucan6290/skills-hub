@@ -1,5 +1,21 @@
 use serde::{Deserialize, Serialize};
 
+use crate::models::{Skill, SkillTarget, SkillUsage, Tag};
+
+// ── Managed Skill DTO ───────────────────────────────────
+
+/// 受管技能 DTO：在前端 `ManagedSkill` 类型基础上补充 tags / targets / usage / is_suite。
+/// 通过 `#[serde(flatten)]` 平铺 `Skill` 的全部字段。
+#[derive(Debug, Clone, Serialize)]
+pub struct ManagedSkillDto {
+    #[serde(flatten)]
+    pub skill: Skill,
+    pub tags: Vec<Tag>,
+    pub targets: Vec<SkillTarget>,
+    pub usage: Vec<SkillUsage>,
+    pub is_suite: bool,
+}
+
 // ── Health ──────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
