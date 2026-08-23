@@ -1,10 +1,10 @@
-use tauri::State;
+﻿use tauri::State;
 
 use crate::error::AppResult;
 use crate::services::onboarding::{self, OnboardingPlan};
 use crate::state::AppState;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_onboarding_plan(state: State<'_, AppState>) -> AppResult<OnboardingPlan> {
     let community_path = crate::repo::community::resolve_community_repo_path(&state.db);
     let custom_path = crate::repo::community::resolve_custom_repo_path(&state.db);

@@ -1,9 +1,9 @@
-use tauri::AppHandle;
+﻿use tauri::AppHandle;
 
 use crate::error::AppResult;
 use crate::update::{self, CheckUpdateResponse, PerformUpdateResponse};
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn check_update(app: AppHandle) -> AppResult<CheckUpdateResponse> {
     let current_version = app.package_info().version.to_string();
     // Determine install mode
@@ -15,7 +15,7 @@ pub async fn check_update(app: AppHandle) -> AppResult<CheckUpdateResponse> {
     Ok(result)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn do_update(app: AppHandle) -> AppResult<PerformUpdateResponse> {
     let current_version = app.package_info().version.to_string();
     let install_mode = detect_install_mode();

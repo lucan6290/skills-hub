@@ -1,4 +1,4 @@
-use tauri::State;
+﻿use tauri::State;
 
 use crate::contracts::{
     DbColumnInfo, DbMaintenanceResult, DbOverview, DbTableData, DbTableInfo, OkResponse,
@@ -50,7 +50,7 @@ fn format_size(bytes: i64) -> String {
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn db_overview(state: State<'_, AppState>) -> AppResult<DbOverview> {
     let db_path = crate::config::default_db_path();
     let db_path_str = db_path.to_string_lossy().to_string();
@@ -123,7 +123,7 @@ pub async fn db_overview(state: State<'_, AppState>) -> AppResult<DbOverview> {
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn db_table_data(
     state: State<'_, AppState>,
     table_name: String,
@@ -283,7 +283,7 @@ pub async fn db_table_data(
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn db_maintenance(
     state: State<'_, AppState>,
     action: String,
@@ -354,7 +354,7 @@ pub async fn db_maintenance(
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn db_reset(state: State<'_, AppState>, confirm_text: String) -> AppResult<OkResponse> {
     if confirm_text != "RESET" && confirm_text != "reset" {
         return Err(AppError::InvalidInput(
@@ -386,7 +386,7 @@ pub async fn db_reset(state: State<'_, AppState>, confirm_text: String) -> AppRe
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn db_export() -> AppResult<OkResponse> {
     // TODO: Implement file save dialog via Tauri plugin when available
     // For now, return the db path so user can copy manually
@@ -400,7 +400,7 @@ pub async fn db_export() -> AppResult<OkResponse> {
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn db_open_folder() -> AppResult<OkResponse> {
     let db_path = crate::config::default_db_path();
     let folder = db_path

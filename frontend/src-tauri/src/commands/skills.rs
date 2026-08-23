@@ -1,4 +1,4 @@
-use tauri::State;
+﻿use tauri::State;
 
 use crate::contracts::ManagedSkillDto;
 use crate::error::{AppError, AppResult};
@@ -12,7 +12,7 @@ use crate::services::install::{
 };
 use crate::state::AppState;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_managed_skills(
     state: State<'_, AppState>,
     refresh: Option<bool>,
@@ -74,7 +74,7 @@ pub async fn get_managed_skills(
     Ok(dtos)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_managed_skill(state: State<'_, AppState>, skill_id: String) -> AppResult<()> {
     let repo = SkillsRepository::new(&state.db);
     // Also remove targets and tag links
@@ -99,7 +99,7 @@ pub async fn delete_managed_skill(state: State<'_, AppState>, skill_id: String) 
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_skill_source_url(
     state: State<'_, AppState>,
     skill_id: String,
@@ -114,7 +114,7 @@ pub async fn update_skill_source_url(
         .ok_or_else(|| AppError::NotFound(format!("skill not found: {}", skill_id)))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn import_existing_skill(
     state: State<'_, AppState>,
     source_path: String,
@@ -150,13 +150,13 @@ pub async fn import_existing_skill(
     }))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_local_skills_cmd(base_path: String) -> AppResult<Vec<LocalSkillCandidate>> {
     let path = std::path::Path::new(&base_path);
     list_local_skills(path).map_err(|e| AppError::FileSystemError(e))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn install_local_selection(
     state: State<'_, AppState>,
     base_path: String,

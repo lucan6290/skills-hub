@@ -1,11 +1,11 @@
-use tauri::State;
+﻿use tauri::State;
 
 use crate::error::{AppError, AppResult};
 use crate::models::{Tag, TagWithCount};
 use crate::repositories::TagsRepository;
 use crate::state::AppState;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_tags(
     state: State<'_, AppState>,
     source_type: Option<String>,
@@ -17,7 +17,7 @@ pub async fn get_tags(
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_tag(state: State<'_, AppState>, name: String) -> AppResult<()> {
     let repo = TagsRepository::new(&state.db);
     repo.create(&name)
@@ -25,7 +25,7 @@ pub async fn create_tag(state: State<'_, AppState>, name: String) -> AppResult<(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn rename_tag(
     state: State<'_, AppState>,
     tag_id: i64,
@@ -38,21 +38,21 @@ pub async fn rename_tag(
     Ok(serde_json::json!({ "id": tag.id, "name": tag.name }))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_tag(state: State<'_, AppState>, tag_id: i64) -> AppResult<()> {
     let repo = TagsRepository::new(&state.db);
     repo.delete(tag_id)
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_skill_tags(state: State<'_, AppState>, skill_id: String) -> AppResult<Vec<Tag>> {
     let repo = TagsRepository::new(&state.db);
     repo.get_skill_tags(&skill_id)
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn set_skill_tags(
     state: State<'_, AppState>,
     skill_id: String,

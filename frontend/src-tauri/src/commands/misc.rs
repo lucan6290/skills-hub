@@ -1,24 +1,24 @@
-use tauri::State;
+﻿use tauri::State;
 
 use crate::contracts::{PickFolderResult, ReorderItem};
 use crate::error::{AppError, AppResult};
 use crate::repositories::ToolAdapterConfigsRepository;
 use crate::state::AppState;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn pick_folder() -> AppResult<PickFolderResult> {
     // Tauri dialog plugin is not available; return None to trigger fallback in frontend
     // TODO: Integrate tauri-plugin-dialog for native folder picker
     Ok(PickFolderResult { path: None })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn cancel_current_operation(state: State<'_, AppState>) -> AppResult<()> {
     state.task_manager.cancel_all_running();
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn reorder(
     state: State<'_, AppState>,
     entity: String,

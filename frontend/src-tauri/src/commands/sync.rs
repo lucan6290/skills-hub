@@ -1,4 +1,4 @@
-use tauri::State;
+﻿use tauri::State;
 
 use crate::db::now_ms;
 use crate::error::{AppError, AppResult};
@@ -11,7 +11,7 @@ use crate::tools::adapter::{
     self, effective_tool_adapters, resolve_default_path, resolve_project_path,
 };
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn sync_skill_to_tool(
     state: State<'_, AppState>,
     source_path: String,
@@ -101,7 +101,7 @@ pub async fn sync_skill_to_tool(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn unsync_skill_from_tool(
     state: State<'_, AppState>,
     skill_id: String,
@@ -128,7 +128,7 @@ pub async fn unsync_skill_from_tool(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn sync_suite_to_tool(
     state: State<'_, AppState>,
     source_path: String,
@@ -257,7 +257,7 @@ pub async fn sync_suite_to_tool(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn unsync_suite_from_tool(
     state: State<'_, AppState>,
     skill_id: String,
@@ -282,14 +282,14 @@ pub async fn unsync_suite_from_tool(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_scope_preferences(state: State<'_, AppState>) -> AppResult<Vec<ScopePreference>> {
     let repo = ScopePreferencesRepository::new(&state.db);
     repo.list_all()
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn set_scope_preference(
     state: State<'_, AppState>,
     skill_id: String,
@@ -301,14 +301,14 @@ pub async fn set_scope_preference(
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_recent_projects(state: State<'_, AppState>) -> AppResult<Vec<String>> {
     let repo = RecentProjectsRepository::new(&state.db);
     repo.list(8)
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn save_recent_project(
     state: State<'_, AppState>,
     project_path: String,
@@ -320,7 +320,7 @@ pub async fn save_recent_project(
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_suite_sub_skills(
     state: State<'_, AppState>,
     skill_id: String,

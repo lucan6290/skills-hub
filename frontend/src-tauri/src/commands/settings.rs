@@ -1,11 +1,11 @@
-use tauri::State;
+﻿use tauri::State;
 
 use crate::contracts::{OkResponse, SetCustomRepoPathResponse, SetRepoPathResponse};
 use crate::error::{AppError, AppResult};
 use crate::repositories::SettingsRepository;
 use crate::state::AppState;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_default_sync_tools(state: State<'_, AppState>) -> AppResult<Vec<String>> {
     let repo = SettingsRepository::new(&state.db);
     match repo.get("default_sync_tools") {
@@ -17,7 +17,7 @@ pub async fn get_default_sync_tools(state: State<'_, AppState>) -> AppResult<Vec
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn save_default_sync_tools(
     state: State<'_, AppState>,
     tools: Vec<String>,
@@ -28,7 +28,7 @@ pub async fn save_default_sync_tools(
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_auto_check_update(state: State<'_, AppState>) -> AppResult<bool> {
     let repo = SettingsRepository::new(&state.db);
     match repo.get("auto_check_update") {
@@ -37,7 +37,7 @@ pub async fn get_auto_check_update(state: State<'_, AppState>) -> AppResult<bool
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn set_auto_check_update(state: State<'_, AppState>, enabled: bool) -> AppResult<()> {
     let repo = SettingsRepository::new(&state.db);
     let val = if enabled { "true" } else { "false" };
@@ -45,13 +45,13 @@ pub async fn set_auto_check_update(state: State<'_, AppState>, enabled: bool) ->
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_community_repo_path(state: State<'_, AppState>) -> AppResult<String> {
     let path = crate::repo::community::resolve_community_repo_path(&state.db);
     Ok(path.to_string_lossy().to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn set_community_repo_path(
     state: State<'_, AppState>,
     path: String,
@@ -71,13 +71,13 @@ pub async fn set_community_repo_path(
     Ok(SetRepoPathResponse { new_path: path })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_custom_repo_path(state: State<'_, AppState>) -> AppResult<String> {
     let path = crate::repo::community::resolve_custom_repo_path(&state.db);
     Ok(path.to_string_lossy().to_string())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn set_custom_repo_path(
     state: State<'_, AppState>,
     path: String,
@@ -105,7 +105,7 @@ pub async fn set_custom_repo_path(
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn open_settings_folder(path: Option<String>) -> AppResult<OkResponse> {
     let folder = path.unwrap_or_else(|| {
         crate::config::resolve_data_dir()
@@ -127,7 +127,7 @@ pub async fn open_settings_folder(path: Option<String>) -> AppResult<OkResponse>
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn reset_general_settings(state: State<'_, AppState>) -> AppResult<OkResponse> {
     let repo = SettingsRepository::new(&state.db);
     let keys_to_reset = [

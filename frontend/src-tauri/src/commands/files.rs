@@ -1,11 +1,11 @@
-use tauri::State;
+﻿use tauri::State;
 
 use crate::error::{AppError, AppResult};
 use crate::repositories::SkillsRepository;
 use crate::skills::files::{self, FileEntry};
 use crate::state::AppState;
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_skill_files(
     state: State<'_, AppState>,
     skill_id: String,
@@ -19,7 +19,7 @@ pub async fn list_skill_files(
     files::list_files(&skill.community_path).map_err(|e| AppError::FileSystemError(e))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn read_skill_file(
     state: State<'_, AppState>,
     skill_id: String,
@@ -34,7 +34,7 @@ pub async fn read_skill_file(
     files::read_file(&skill.community_path, &file_path).map_err(|e| AppError::FileSystemError(e))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn write_skill_file(
     state: State<'_, AppState>,
     skill_id: String,

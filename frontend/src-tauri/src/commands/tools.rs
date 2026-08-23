@@ -1,4 +1,4 @@
-use tauri::State;
+﻿use tauri::State;
 
 use crate::contracts::{OkNameResponse, OkPathResponse, OkRemovedResponse};
 use crate::db::now_ms;
@@ -9,7 +9,7 @@ use crate::state::AppState;
 use crate::tools::adapter::{self, effective_tool_adapters, resolve_default_path};
 use crate::tools::skill_cache::{self, ToolSkillsResponse};
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_tool_status(
     state: State<'_, AppState>,
 ) -> AppResult<crate::contracts::ToolStatusDto> {
@@ -56,7 +56,7 @@ pub async fn get_tool_status(
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_tool_skills(
     state: State<'_, AppState>,
     refresh: Option<bool>,
@@ -86,7 +86,7 @@ pub async fn get_tool_skills(
     Ok(results)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_tool_adapter_configs(
     state: State<'_, AppState>,
 ) -> AppResult<Vec<serde_json::Value>> {
@@ -127,7 +127,7 @@ pub async fn get_tool_adapter_configs(
     Ok(result)
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn save_tool_adapter_config(
     state: State<'_, AppState>,
     tool_key: String,
@@ -163,7 +163,7 @@ pub async fn save_tool_adapter_config(
         .map_err(|e| AppError::DatabaseError(e.to_string()))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn reset_tool_adapter_config(
     state: State<'_, AppState>,
     tool_key: String,
@@ -187,14 +187,14 @@ pub async fn reset_tool_adapter_config(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_tool_skill(tool_key: String, skill_path: String) -> AppResult<()> {
     let _ = tool_key; // tool_key used for context but deletion is path-based
     crate::filesystem::remove_link_or_directory(&skill_path)
         .map_err(|e| AppError::FileSystemError(e))
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn open_tool_skills_dir(
     state: State<'_, AppState>,
     tool_key: String,
@@ -215,7 +215,7 @@ pub async fn open_tool_skills_dir(
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn skill_to_community_repo(
     state: State<'_, AppState>,
     source_path: String,
@@ -243,7 +243,7 @@ pub async fn skill_to_community_repo(
     Ok(OkNameResponse { ok: true, name })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn clear_tool_skills(
     state: State<'_, AppState>,
     tool_key: String,
