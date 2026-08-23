@@ -128,6 +128,27 @@ pub async fn open_settings_folder(path: Option<String>) -> AppResult<OkResponse>
 }
 
 #[tauri::command(rename_all = "snake_case")]
+pub async fn get_proxy_url(state: State<'_, AppState>) -> AppResult<String> {
+    let repo = SettingsRepository::new(&state.db);
+    match repo.get("proxy_url") {
+        Ok(Some(val)) => Ok(val),
+        _ => Ok(String::new()),
+    }
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn set_proxy_url(state: State<'_, AppState>, url: String) -> AppResult<()> {
+    let repo = SettingsRepository::new(&state.db);
+    if url.is_empty() {
+        let _ = repo.delete("proxy_url");
+    } else {
+        repo.set("proxy_url", &url)
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    }
+    Ok(())
+}
+
+#[tauri::command(rename_all = "snake_case")]
 pub async fn reset_general_settings(state: State<'_, AppState>) -> AppResult<OkResponse> {
     let repo = SettingsRepository::new(&state.db);
     let keys_to_reset = [
@@ -135,6 +156,7 @@ pub async fn reset_general_settings(state: State<'_, AppState>) -> AppResult<OkR
         "custom_repo_path",
         "default_sync_tools",
         "auto_check_update",
+        "proxy_url",
     ];
     for key in &keys_to_reset {
         let _ = repo.delete(key);

@@ -1,29 +1,42 @@
-﻿use tauri::AppHandle;
+﻿use tauri::{AppHandle, State};
 
 use crate::error::AppResult;
+use crate::repositories::SettingsRepository;
+use crate::state::AppState;
 use crate::update::{self, CheckUpdateResponse, PerformUpdateResponse};
 
-#[tauri::command(rename_all = "snake_case")]
-pub async fn check_update(app: AppHandle) -> AppResult<CheckUpdateResponse> {
-    let current_version = app.package_info().version.to_string();
-    // Determine install mode
-    let install_mode = detect_install_mode();
+fn read_proxy_url(state: &AppState) -> Option<String> {
+    let repo = SettingsRepository::new(&state.db);
+    match repo.get("proxy_url") {
+        Ok(Some(val)) if !val.is_empty() => Some(val),
+        _ => None,
+    }
+}
 
-    // Run blocking HTTP call on a background thread
-    let result = tokio_or_spawn(move || update::check_for_update(&current_version, &install_mode));
+#[tauri::command(rename_all = "snake_case")]
+pub async fn check_update(app: AppHandle, state: State<'_, AppState>) -> AppResult<CheckUpdateResponse> {
+    let current_version = app.package_info().version.to_string();
+    let install_mode = detect_install_mode();
+    let proxy_url = read_proxy_url(&state);
+
+    let result = tokio_or_spawn(move || {
+        update::check_for_update(&current_version, &install_mode, proxy_url.as_deref())
+    });
 
     Ok(result)
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn do_update(app: AppHandle) -> AppResult<PerformUpdateResponse> {
+pub async fn do_update(app: AppHandle, state: State<'_, AppState>) -> AppResult<PerformUpdateResponse> {
     let current_version = app.package_info().version.to_string();
     let install_mode = detect_install_mode();
     let install_mode2 = install_mode.clone();
+    let proxy_url = read_proxy_url(&state);
+    let proxy_url2 = proxy_url.clone();
 
-    // First check for update to get download URLs
-    let check_result =
-        tokio_or_spawn(move || update::check_for_update(&current_version, &install_mode));
+    let check_result = tokio_or_spawn(move || {
+        update::check_for_update(&current_version, &install_mode, proxy_url.as_deref())
+    });
 
     if !check_result.update_available {
         return Ok(PerformUpdateResponse {
@@ -32,8 +45,9 @@ pub async fn do_update(app: AppHandle) -> AppResult<PerformUpdateResponse> {
         });
     }
 
-    let result =
-        tokio_or_spawn(move || update::perform_update(&install_mode2, &check_result.download_urls));
+    let result = tokio_or_spawn(move || {
+        update::perform_update(&install_mode2, &check_result.download_urls, proxy_url2.as_deref())
+    });
 
     Ok(result)
 }

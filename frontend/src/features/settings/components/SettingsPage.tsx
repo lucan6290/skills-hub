@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import {
   ArrowLeft,
   Sun,
@@ -11,11 +11,13 @@ import {
   ChevronDown,
   RotateCcw,
   X,
+  Globe,
 } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import { toast } from 'sonner'
 import DatabasePanel from '@/features/database/components/DatabasePanel'
 import UpdatePanel from '@/features/settings/components/UpdatePanel'
+import { getProxyUrl, setProxyUrl } from '@/lib/api'
 import logoLight from '@/assets/logo.svg'
 import logoDark from '@/assets/logo-dark.svg'
 
@@ -106,6 +108,24 @@ const SettingsPage = ({
   const [showCustomRepo, setShowCustomRepo] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [proxyUrl, setProxyUrlState] = useState('')
+  const [proxySaving, setProxySaving] = useState(false)
+
+  useEffect(() => {
+    getProxyUrl().then(setProxyUrlState).catch(() => {})
+  }, [])
+
+  const handleSaveProxy = async () => {
+    setProxySaving(true)
+    try {
+      await setProxyUrl(proxyUrl.trim())
+      toast.success(t('settings.saved'))
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err))
+    } finally {
+      setProxySaving(false)
+    }
+  }
 
   const handleCopyPath = async (path: string) => {
     try {
@@ -242,6 +262,33 @@ const SettingsPage = ({
                   </div>
                 )}
               </div>
+            </section>
+
+            {/* Network Proxy Section */}
+            <section className="settings-v2-card">
+              <h3 className="settings-v2-section-title">
+                <Globe size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
+                {t('settings.proxyTitle')}
+              </h3>
+              <p className="settings-v2-section-desc">{t('settings.proxyDesc')}</p>
+              <div className="settings-v2-proxy-row">
+                <input
+                  type="text"
+                  className="settings-v2-proxy-input"
+                  placeholder={t('settings.proxyPlaceholder')}
+                  value={proxyUrl}
+                  onChange={(e) => setProxyUrlState(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={proxySaving}
+                  onClick={handleSaveProxy}
+                >
+                  {proxySaving ? t('saving') : t('save')}
+                </button>
+              </div>
+              <p className="settings-v2-card-note">{t('settings.proxyHint')}</p>
             </section>
 
             {/* Reset to defaults */}

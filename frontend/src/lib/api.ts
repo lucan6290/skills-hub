@@ -251,3 +251,13 @@ export async function getAutoCheckUpdate(): Promise<boolean> {
 export async function setAutoCheckUpdate(enabled: boolean): Promise<void> {
   await invokeCommand('set_auto_check_update', { enabled })
 }
+
+// ── 代理设置 ───────────────────────────────────────────
+
+export async function getProxyUrl(): Promise<string> {
+  return invokeCommand<string>('get_proxy_url')
+}
+
+export async function setProxyUrl(url: string): Promise<void> {
+  await invokeCommand('set_proxy_url', { url })
+}

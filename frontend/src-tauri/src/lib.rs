@@ -79,6 +79,8 @@ pub fn run() {
             crate::commands::settings::get_custom_repo_path,
             crate::commands::settings::set_custom_repo_path,
             crate::commands::settings::open_settings_folder,
+            crate::commands::settings::get_proxy_url,
+            crate::commands::settings::set_proxy_url,
             crate::commands::settings::reset_general_settings,
             // database
             crate::commands::database::db_overview,

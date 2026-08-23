@@ -76,6 +76,10 @@ export const resources = {
         resetConfirmTitle: 'Reset default settings',
         resetConfirmDesc: 'Restore language, theme and storage paths to defaults. Existing skill files will not be migrated or removed; please back them up first.',
         aboutDesc: 'Manage and sync your AI Agent Skills across all coding tools.',
+        proxyTitle: 'Network Proxy',
+        proxyDesc: 'Configure a proxy for update checks and downloads. Leave empty to use direct connection.',
+        proxyPlaceholder: 'e.g. http://127.0.0.1:7890',
+        proxyHint: 'Supports HTTP/HTTPS/SOCKS5 proxy formats (e.g. http://host:port).',
       },
       update: {
         title: 'Update',
@@ -646,6 +650,10 @@ export const resources = {
         resetConfirmTitle: '恢复默认设置',
         resetConfirmDesc: '将语言、主题和存储路径恢复为默认值。已有技能文件不会被自动迁移或删除，请先手动备份。',
         aboutDesc: '统一管理并同步你的 AI Agent Skills 到所有编码工具。',
+        proxyTitle: '网络代理',
+        proxyDesc: '为检查更新和下载配置代理地址。留空则使用直连。',
+        proxyPlaceholder: '例如 http://127.0.0.1:7890',
+        proxyHint: '支持 HTTP/HTTPS/SOCKS5 代理格式（如 http://host:port）。',
       },
       update: {
         title: '更新',

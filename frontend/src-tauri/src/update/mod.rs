@@ -82,13 +82,17 @@ struct GithubAsset {
 }
 
 /// Check for updates via GitHub Releases API.
-pub fn check_for_update(current_version: &str, install_mode: &str) -> CheckUpdateResponse {
+pub fn check_for_update(
+    current_version: &str,
+    install_mode: &str,
+    proxy_url: Option<&str>,
+) -> CheckUpdateResponse {
     let url = format!(
         "https://api.github.com/repos/{}/{}/releases/latest",
         GITHUB_OWNER, GITHUB_REPO
     );
 
-    match fetch_release_info(&url) {
+    match fetch_release_info(&url, proxy_url) {
         Ok(release) => {
             let tag_name = release.tag_name.unwrap_or_default();
             let latest_version = tag_name.trim_start_matches('v').to_string();
@@ -141,13 +145,29 @@ pub fn check_for_update(current_version: &str, install_mode: &str) -> CheckUpdat
     }
 }
 
+/// Build an HTTP client with optional proxy support.
+fn build_http_client(
+    timeout: std::time::Duration,
+    proxy_url: Option<&str>,
+) -> Result<reqwest::blocking::Client, String> {
+    let mut builder = reqwest::blocking::Client::builder()
+        .timeout(timeout)
+        .user_agent("SkillsHub-Update-Checker");
+
+    if let Some(proxy) = proxy_url {
+        if !proxy.is_empty() {
+            let p = reqwest::Proxy::all(proxy)
+                .map_err(|e| format!("invalid proxy URL '{}': {}", proxy, e))?;
+            builder = builder.proxy(p);
+        }
+    }
+
+    builder.build().map_err(|e| format!("failed to create HTTP client: {}", e))
+}
+
 /// Fetch release info from GitHub API using reqwest blocking client.
-fn fetch_release_info(url: &str) -> Result<GithubRelease, String> {
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(10))
-        .user_agent("SkillsHub-Update-Checker")
-        .build()
-        .map_err(|e| format!("failed to create HTTP client: {}", e))?;
+fn fetch_release_info(url: &str, proxy_url: Option<&str>) -> Result<GithubRelease, String> {
+    let client = build_http_client(std::time::Duration::from_secs(10), proxy_url)?;
 
     let response = client
         .get(url)
@@ -183,7 +203,11 @@ fn friendly_network_error(e: &reqwest::Error) -> String {
 
 /// Perform the update: download and prepare the updater script.
 /// In test/mock mode, this does not actually replace the running executable.
-pub fn perform_update(install_mode: &str, download_urls: &DownloadUrls) -> PerformUpdateResponse {
+pub fn perform_update(
+    install_mode: &str,
+    download_urls: &DownloadUrls,
+    proxy_url: Option<&str>,
+) -> PerformUpdateResponse {
     if install_mode == "dev" {
         return PerformUpdateResponse {
             ok: false,
@@ -223,7 +247,7 @@ pub fn perform_update(install_mode: &str, download_urls: &DownloadUrls) -> Perfo
     let dest_path = update_dir.join(filename);
 
     // Download the file
-    match download_file(url, &dest_path) {
+    match download_file(url, &dest_path, proxy_url) {
         Ok(_) => {}
         Err(e) => {
             return PerformUpdateResponse {
@@ -286,11 +310,8 @@ pub fn perform_update(install_mode: &str, download_urls: &DownloadUrls) -> Perfo
     }
 }
 
-fn download_file(url: &str, dest: &std::path::Path) -> Result<(), String> {
-    let client = reqwest::blocking::Client::builder()
-        .timeout(std::time::Duration::from_secs(300))
-        .build()
-        .map_err(|e| format!("HTTP client error: {}", e))?;
+fn download_file(url: &str, dest: &std::path::Path, proxy_url: Option<&str>) -> Result<(), String> {
+    let client = build_http_client(std::time::Duration::from_secs(300), proxy_url)?;
 
     let response = client
         .get(url)
@@ -384,7 +405,7 @@ mod tests {
     #[test]
     fn test_perform_update_dev_mode() {
         let urls = empty_download_urls();
-        let result = perform_update("dev", &urls);
+        let result = perform_update("dev", &urls, None);
         assert!(!result.ok);
         assert!(result.message.contains("开发模式"));
     }
@@ -392,14 +413,14 @@ mod tests {
     #[test]
     fn test_perform_update_unknown_mode() {
         let urls = empty_download_urls();
-        let result = perform_update("unknown", &urls);
+        let result = perform_update("unknown", &urls, None);
         assert!(!result.ok);
     }
 
     #[test]
     fn test_perform_update_empty_url() {
         let urls = empty_download_urls();
-        let result = perform_update("setup", &urls);
+        let result = perform_update("setup", &urls, None);
         assert!(!result.ok);
         assert!(result.message.contains("下载链接"));
     }
@@ -417,7 +438,7 @@ mod tests {
     fn test_check_update_returns_response_on_error() {
         // This will fail because we can't reach GitHub in tests,
         // but it should return a valid response with error field set
-        let response = check_for_update("0.1.0", "dev");
+        let response = check_for_update("0.1.0", "dev", None);
         assert_eq!(response.current_version, "0.1.0");
         assert!(!response.update_available);
         // Error may or may not be set depending on network
