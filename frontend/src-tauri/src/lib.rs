@@ -6,9 +6,14 @@ pub mod error;
 pub mod filesystem;
 pub mod models;
 pub mod platform;
+pub mod repo;
 pub mod repositories;
+pub mod services;
 pub mod skills;
 pub mod state;
+pub mod tasks;
+pub mod tools;
+pub mod update;
 pub mod utils;
 
 use tauri::Manager;
