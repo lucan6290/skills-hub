@@ -1,0 +1,1 @@
+{"main-window":{"identifier":"main-window","description":"Capabilities for the Skills Hub main window. Granular per-plugin permissions on top of core defaults.","local":true,"windows":["main"],"permissions":["core:default","autostart:default","deep-link:default","notification:default","updater:default"]}}
