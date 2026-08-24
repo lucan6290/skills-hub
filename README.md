@@ -87,7 +87,7 @@ node scripts/version.mjs set <x.y.z>        # 设置新版本号（同时更新 
 #    格式：## [0.x.x] - YYYY-MM-DD
 #    分类：Added / Changed / Fixed / Technical
 
-# 2. 更新版本号（同时更新 frontend/package.json 和 backend/core/version.py）
+# 2. 更新版本号（同时更新 frontend/package.json 和 frontend/src-tauri/Cargo.toml）
 node scripts/version.mjs set 0.x.x
 
 # 3. 校验前后端版本一致

@@ -2,9 +2,7 @@
 
 > [中文版本](../README.md) | English
 
-A cross-platform desktop application (React 19 + Python FastAPI) for managing AI Agent Skills and syncing them to multiple AI coding tools' global or project-level skills directories (symlink/junction preferred, copy fallback), achieving "Install once, sync everywhere".
-
-Supports both browser mode and standalone desktop window mode, and can be packaged as a single-file exe.
+A cross-platform desktop application (React 19 + Rust Tauri) for managing AI Agent Skills and syncing them to multiple AI coding tools' global or project-level skills directories (symlink/junction preferred, copy fallback), achieving "Install once, sync everywhere".
 
 ## Features
 
@@ -21,8 +19,7 @@ Supports both browser mode and standalone desktop window mode, and can be packag
 ## Tech Stack
 
 - **Frontend**: React 19 + TypeScript 5.9 (strict mode) + Vite 7 + Tailwind CSS 4
-- **Backend**: Python 3.10+ + FastAPI + SQLite
-- **HTTP Communication**: `fetch` → Python backend (`localhost:18921`)
+- **Backend**: Rust + Tauri 2 + SQLite (rusqlite)
 - **i18n**: i18next (English / Chinese bilingual)
 
 ## Development
@@ -30,60 +27,38 @@ Supports both browser mode and standalone desktop window mode, and can be packag
 ### Requirements
 
 - Node.js 18+ (20+ recommended)
-- Python 3.10+ (with pip)
+- Rust 1.77+ (stable)
+- [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/)
 
-### Browser Mode
+### Development Mode
 
 ```bash
-# Backend (Terminal 1)
-cd backend
-pip install -r requirements.txt
-python main.py                 # FastAPI → http://localhost:18921
-
-# Frontend (Terminal 2)
 cd frontend
 npm install
-npm run dev                    # Vite dev server → http://localhost:5173
+npm run tauri dev              # Vite HMR + Tauri desktop window
 ```
 
-### Desktop Window Mode
+### Building for Production
 
 ```bash
-# 1. Build the frontend
 cd frontend
-npm install
-npm run build                  # Output to frontend/dist/
-
-# 2. Launch desktop window (backend auto-hosted)
-cd ../backend
-pip install -r requirements.txt
-python desktop.py              # pywebview native window, no browser needed
+npm run tauri build            # Outputs NSIS installer to src-tauri/target/release/bundle/
 ```
 
-> Desktop mode uses `pywebview` to create a standalone window; the backend starts automatically in the background, no need to run `python main.py` separately.
-
-### Building exe
+### Quality Checks
 
 ```bash
-# Run from the backend/ directory
-python build.py                # Outputs SkillsHub.exe to dist/
-```
-
-> Run `npm run build` in `frontend/` before packaging. `build.py` automatically bundles the frontend static files into the exe.
-
-### Quality Checks (in `frontend/`)
-
-```bash
+cd frontend
 npm run lint            # ESLint
 npm run build           # tsc + vite build
 npm run check           # lint + build
 ```
 
-### Backend Tests
+### Rust Tests
 
 ```bash
-cd backend
-python -m pytest        # or: pytest
+cd frontend/src-tauri
+cargo test
 ```
 
 ### Version Management
@@ -93,31 +68,38 @@ Project version numbers are managed uniformly across frontend and backend via a 
 ```bash
 # Run from project root
 node scripts/version.mjs check              # Verify frontend and backend versions are in sync
-node scripts/version.mjs set <x.y.z>        # Set a new version (updates both frontend/package.json and backend/core/version.py)
+node scripts/version.mjs set <x.y.z>        # Set a new version (updates both frontend/package.json and frontend/src-tauri/Cargo.toml)
 ```
 
 Version sources:
 - Frontend: `version` in `frontend/package.json` (injected into frontend code at build time by Vite)
-- Backend: `__version__` in `backend/core/version.py` (used by FastAPI and the health endpoint)
+- Backend: `version` in `frontend/src-tauri/Cargo.toml`
 - The two files are kept in sync by `scripts/version.mjs`; do not modify either one manually.
 
 ### Release
 
+**Important: Update CHANGELOG.md before tagging, otherwise CI cannot automatically extract release notes.**
+
 ```bash
-# 1. Update version
+# 1. Update CHANGELOG.md with a new version entry under "## [Unreleased]"
+#    Format: ## [0.x.x] - YYYY-MM-DD
+#    Categories: Added / Changed / Fixed / Technical
+
+# 2. Update version (updates both frontend/package.json and frontend/src-tauri/Cargo.toml)
 node scripts/version.mjs set 0.x.x
 
-# 2. Commit and tag
+# 3. Verify frontend and backend versions are in sync
+node scripts/version.mjs check
+
+# 4. Commit and tag
 git add -A
 git commit -m "chore: bump version to v0.x.x"
-git tag v0.x.x
+git tag -a v0.x.x -m "Release v0.x.x"
 
-# 3. Push code and tag (pushing the tag triggers GitHub Actions to build the Release)
+# 5. Push code and tag (pushing the tag triggers GitHub Actions to build the Release)
 git push origin main
 git push origin v0.x.x
 ```
-
-After pushing the tag, GitHub Actions will automatically build the exe, ZIP, and NSIS installer on a Windows runner and create a draft Release. You can edit release notes on the GitHub Releases page and publish manually.
 
 If CI fails and you need to push the same tag again after fixing it:
 
@@ -129,9 +111,11 @@ git pull origin main
 git push origin main
 git tag -d v0.x.x
 git push origin :refs/tags/v0.x.x
-git tag v0.x.x
+git tag -a v0.x.x -m "Release v0.x.x"
 git push origin v0.x.x
 ```
+
+After pushing the tag, GitHub Actions will automatically build the exe, ZIP, and NSIS installer on a Windows runner, extract the corresponding version's content from CHANGELOG.md as release notes, and create a draft Release. You can edit release notes on the GitHub Releases page and publish manually.
 
 ## Project Structure
 
@@ -141,21 +125,16 @@ skills-hub/
 │   ├── src/
 │   │   ├── lib/                    # api.ts, errors.ts, pickFolder.ts, utils.ts
 │   │   ├── hooks/                  # Custom hooks (useApi, useSkills, useScopeState, etc.)
-│   │   ├── context/                # React contexts (AppState, Modal)
-│   │   ├── components/skills/     # Skill components (Header, FilterBar, SkillCard, SkillsList, etc.)
+│   │   ├── features/               # Feature modules (skills, settings, tools, tags, import-flow)
 │   │   └── i18n/                   # English/Chinese translations
+│   ├── src-tauri/          # Rust Tauri backend
+│   │   ├── src/
+│   │   │   ├── commands/           # Tauri command entry points
+│   │   │   ├── repositories/       # Database access layer
+│   │   │   ├── services/           # Business logic
+│   │   │   └── update/             # Update check and execution
+│   │   └── Cargo.toml
 │   └── package.json
-├── backend/                # Python FastAPI backend
-│   ├── main.py                     # FastAPI entry (port 18921)
-│   ├── desktop.py                  # pywebview desktop window entry
-│   ├── build.py                    # PyInstaller packaging script
-│   ├── api/                        # Route handlers (skills/, tools/, tags, settings, onboarding)
-│   ├── core/                       # Business logic
-│   │   ├── db/store.py             # SQLite ORM (12 tables)
-│   │   ├── repo/                   # Dual-source repos (community, scanner, migration)
-│   │   ├── skills/                 # Skill operations (sync_engine, installer, files, source_paths)
-│   │   └── tools/                  # Tool adapters
-│   └── models/                     # Pydantic DTOs
 ├── docs/                   # Documentation
 ├── scripts/                # Build & version scripts
 └── README.md
@@ -226,7 +205,6 @@ Project-level skills directories are relative to the chosen project root. Tools 
 - **What is project-level sync?** A skill is still stored once in the Community Repo, but its sync target is a specific project directory — e.g. `<project>/.agents/skills`, `<project>/.claude/skills`, or other tool-specific project skills paths.
 - **Why does syncing to Cursor always use copy?** Cursor currently does not support symlink/junction-based skills directories, so Skills Hub forces directory copy when syncing to Cursor.
 - **Why does sync sometimes fall back to copy?** Skills Hub prefers symlink/junction, but on some systems (especially Windows) symlinks may be restricted, in which case it falls back to directory copy.
-- **What does `TARGET_EXISTS|...` mean?** The target folder already exists and the operation did not overwrite it (non-destructive by default). Delete the existing folder or use the overwrite flow to retry.
 
 ## License
 

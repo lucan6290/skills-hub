@@ -10,7 +10,7 @@
 | 层级 | 命名风格 | 示例 |
 |------|---------|------|
 | **JSON 线上传输** | `snake_case` | `skill_id`, `source_type`, `created_at` |
-| **Python 后端 Pydantic 字段** | `snake_case` | `skill_id: str`, `source_type: str` |
+| **Rust 后端 struct 字段** | `snake_case` | `skill_id: i64`, `source_type: String` |
 | **TypeScript 前端 DTO 类型** | `snake_case` | `skill_id: string`, `source_type: string` |
 | **TypeScript 前端 API 调用参数** | `snake_case` | `{ skill_id: 'x', tag_ids: [1, 2] }` |
 | **前端 useState / Props / 函数名** | `camelCase` | `managedSkills`, `searchQuery`, `handleDelete` |
@@ -25,16 +25,16 @@
 ## 二、禁止事项
 
 1. **禁止**使用 `toSnakeCase()` / `toCamelCase()` 等转换函数在前后端之间自动转换字段名
-2. **禁止**后端 Pydantic 模型中使用 `Field(alias="camelCaseName")` 来兼容 camelCase 输入
+2. **禁止**后端 serde struct 使用 `#[serde(rename = "camelCaseName")]` 来兼容 camelCase
 3. **禁止**前后端字段名不一致 —— 后端叫 `skill_id`，前端 DTO 也必须叫 `skill_id`
 
 ---
 
 ## 三、各层详细规范
 
-### 3.1 JSON 线上传输
+### 3.1 Tauri IPC JSON 传输
 
-所有 HTTP 请求/响应的 JSON body **统一使用 `snake_case`**：
+所有 Tauri invoke 通信的 JSON payload **统一使用 `snake_case`**：
 
 ```json
 // 正确
@@ -51,27 +51,35 @@
 - 时间戳字段用 `_at` 后缀：`created_at`, `updated_at`, `synced_at`
 - 计数/数量字段用 `_count` 后缀：`skill_count`, `view_count`, `sync_count`
 
-### 3.2 Python 后端（Pydantic 模型）
+### 3.2 Rust 后端（serde struct）
 
-**字段名使用 snake_case**，与 JSON 完全一致，**不需要 alias**：
+**字段名使用 snake_case**，与 JSON 完全一致，**不需要 `#[serde(rename)]`**：
 
-```python
-class ManagedSkillDto(BaseModel):
-    id: str
-    name: str
-    source_type: str
-    community_path: str
-    created_at: int
-    updated_at: int
-    sort_order: float = 0.0
+```rust
+// src-tauri/src/contracts.rs
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub struct ManagedSkillDto {
+    pub id: i64,
+    pub name: String,
+    pub source_type: String,
+    pub community_path: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub sort_order: f64,
+}
 ```
 
-请求模型同样直接使用 snake_case：
+Tauri command 参数同样直接使用 snake_case（通过 `rename_all = "snake_case"`）：
 
-```python
-class SetSkillTagsRequest(BaseModel):
-    skill_id: str
-    tag_ids: list[int]
+```rust
+#[tauri::command(rename_all = "snake_case")]
+pub async fn set_skill_tags(
+    state: State<'_, AppState>,
+    skill_id: i64,
+    tag_ids: Vec<i64>,
+) -> AppResult<()> { ... }
 ```
 
 ### 3.3 TypeScript 前端（DTO 类型）
@@ -79,7 +87,7 @@ class SetSkillTagsRequest(BaseModel):
 **DTO 类型（与后端交互的数据结构）字段名使用 snake_case**：
 
 ```typescript
-// frontend/src/components/skills/types.ts
+// frontend/src/features/skills/types.ts
 
 export type ManagedSkill = {
   id: string
@@ -102,19 +110,19 @@ export type ManagedSkill = {
 
 ### 3.4 TypeScript 前端（API 调用参数）
 
-**调用 `apiCall()` / `apiGet()` 时参数使用 snake_case**：
+**调用 `invokeCommand()` 时参数使用 snake_case**：
 
 ```typescript
 // 正确
-await apiCall('set_skill_tags', { skill_id: 'abc', tag_ids: [1, 2] })
-await apiCall('sync_skill_to_tool', {
+await invokeCommand('set_skill_tags', { skill_id: 'abc', tag_ids: [1, 2] })
+await invokeCommand('sync_skill_to_tool', {
   skill_id: 'abc',
   tool: 'claude',
   source_path: '/path/to/skill',
 })
 
 // 错误
-await apiCall('set_skill_tags', { skillId: 'abc', tagIds: [1, 2] })
+await invokeCommand('set_skill_tags', { skillId: 'abc', tagIds: [1, 2] })
 ```
 
 ### 3.5 TypeScript 前端（内部状态与 Props）
@@ -178,7 +186,7 @@ type SkillCardProps = {
 
 当需要添加新的前后端交互字段时：
 
-1. **[后端 schemas.py]** 用 snake_case 定义 Pydantic 字段
+1. **[后端 contracts.rs / models/]** 用 snake_case 定义 serde struct 字段
 2. **[前端 types.ts]** 用 snake_case 添加对应的 DTO 类型字段
 3. **[前端调用处]** 用 snake_case 传参
 4. **[前端组件内部]** 如需将该字段存入 useState 或作为 Props 传递，使用 camelCase 命名的中间变量
@@ -194,6 +202,6 @@ type SkillCardProps = {
 | DTO 类型写 `sourceType: string` | DTO 类型写 `source_type: string` |
 | API 参数传 `{ skillId: 'x' }` | API 参数传 `{ skill_id: 'x' }` |
 | 使用转换函数自动改字段名 | 直接写 snake_case，不做转换 |
-| 后端写 `Field(alias="skillId")` | 直接用 snake_case 字段名，无需 alias |
+| 后端使用 `#[serde(rename = "skillId")]` | 直接用 snake_case 字段名，无需 rename |
 | JSON 响应返回 `{ "skillId": 1 }` | JSON 响应返回 `{ "skill_id": 1 }` |
 | 前端组件 Props 用 snake_case | 组件 Props 用 camelCase（DTO 字段除外） |
