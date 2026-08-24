@@ -84,3 +84,77 @@ skills-hub/
 2. **禁止推送远程**：所有提交仅保留在本地仓库，除非用户明确要求，否则绝不执行 `git push`。
 3. **提交规范**：提交消息格式为 `类型: 简要描述`（中文描述），单次提交只包含一个功能/一个修复。
 4. **默认仓库与分支**：默认远程仓库为 `origin`（`https://github.com/lucan6290/skills-hub.git`），默认分支为 `main`。
+
+## 网络代理规范
+
+### 适用场景
+
+当项目执行过程中遇到以下网络相关异常时，**必须立即启用本地代理服务**，所有 Agent 在执行任务时严格遵守：
+
+- 网络连接超时或无法连接（如 `Failed to connect to ... port 443`）
+- API 访问受限（GitHub API、npm registry、crates.io 等）
+- 资源获取失败（依赖安装、更新检查、远程仓库推送等）
+- 任何涉及外部网络请求的操作失败
+
+### 代理配置
+
+- **代理地址**：`127.0.0.1`
+- **代理端口**：`7890`
+- **代理协议**：HTTP/HTTPS（兼容 SOCKS5）
+
+### 配置步骤
+
+1. **Git 代理**（用于 `git push`、`git fetch` 等远程操作）：
+
+   ```bash
+   git config --global http.proxy http://127.0.0.1:7890
+   git config --global https.proxy http://127.0.0.1:7890
+   ```
+
+2. **环境变量代理**（用于 cargo、npm、curl 等命令行工具）：
+
+   ```bash
+   # PowerShell（当前会话）
+   $env:HTTP_PROXY = "http://127.0.0.1:7890"
+   $env:HTTPS_PROXY = "http://127.0.0.1:7890"
+   ```
+
+3. **npm 代理**（用于 `npm install`、`npx` 等）：
+
+   ```bash
+   npm config set proxy http://127.0.0.1:7890
+   npm config set https-proxy http://127.0.0.1:7890
+   ```
+
+4. **cargo 代理**（用于 `cargo build`、`cargo update` 等）：
+
+   在 `~/.cargo/config.toml` 中添加：
+
+   ```toml
+   [http]
+   proxy = "http://127.0.0.1:7890"
+   ```
+
+### 验证方法
+
+配置完成后，执行以下命令验证代理是否生效：
+
+```bash
+# 验证 Git 代理
+git config --global --get http.proxy
+
+# 验证环境变量
+echo $env:HTTPS_PROXY
+
+# 验证网络连通性
+curl -x http://127.0.0.1:7890 -s -o NUL -w "%{http_code}" https://github.com
+# 返回 200 或 301 表示代理可用
+```
+
+### 异常处理流程
+
+1. **首次失败**：遇到网络异常时，首先按上述步骤配置代理，然后重试操作
+2. **代理已配置但仍失败**：确认本地代理服务（如 Clash、v2ray 等）正在运行且监听 7890 端口
+3. **代理服务未运行**：提示用户启动代理服务后再重试
+4. **代理服务无法启动**：停止操作，向用户报告网络问题，等待用户解决后继续
+5. **所有尝试均失败**：记录错误详情，向用户报告，不得绕过代理直接进行无代理的网络操作
