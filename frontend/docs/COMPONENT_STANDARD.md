@@ -79,32 +79,193 @@ Layer 3（action hooks，使用 service 层）
 
 - Layer 2/3 hooks 接收 Layer 1 的状态和回调函数作为**函数参数**，不通过 Context
 - 例：`useImportFlow` 接收 `useSkills` 返回的 `tools`、`isInstalled`、`loadManagedSkills` 等
-- Layer 3 action hooks（`useTagActions`、`useSkillActions`）通过 `@/services` 调用 API，而非直接 `apiCall`
+- Layer 3 action hooks（`useTagActions`、`useSkillActions`）通过 `@/services` 调用 API，而非直接 `invokeCommand`
 - hooks 返回值通过 props 向下传递给组件
 - 所有导入统一使用 `@/` 路径别名
 
-### 3.3 useCallback 规则
+### 3.3 依赖注入：两种参数风格
+
+Hook 接收依赖时使用两种风格，根据参数数量选择：
+
+**方式 A — 位置参数**（参数 ≤ 4 时，用于 `useSkills`、`useSkillFilter`、`useTheme`）：
+
+```typescript
+export function useSkills(
+  t: TFunction,
+  setError: (msg: string) => void,
+  setSuccessToastMessage: (msg: string) => void,
+)
+```
+
+**方式 B — 参数对象**（参数 > 4 时，用于 `useImportFlow`、`useTagActions`、`useSkillActions`、`useScopeManager`、`useAddSkill`）：
+
+```typescript
+interface UseTagActionsParams {
+  t: TFunction
+  loadManagedSkills: () => Promise<void>
+  loadTags: (source: SkillSource) => Promise<void>
+  activeSkillSource: SkillSource
+  setError: (msg: string) => void
+  setSuccessToastMessage: (msg: string) => void
+  setActionMessage: (msg: string | null) => void
+  selectedTagIds: number[]
+  setSelectedTagIds: (updater: number[] | ((prev: number[]) => number[])) => void
+  pendingDeleteTag: TagWithCountDto | null
+  setPendingDeleteTag: (tag: TagWithCountDto | null) => void
+  globalLoading: boolean
+  setLoading: (v: boolean) => void
+  setLoadingStartAt: (v: number | null) => void
+}
+export function useTagActions(params: UseTagActionsParams)
+```
+
+每个使用方式 B 的 hook 须定义对应的 `...Params` 或 `...Deps` 接口。
+
+### 3.4 Service 层访问：两种方式
+
+Hook 访问后端 API 时使用两种方式，均最终调用 `invokeCommand`：
+
+1. **Service 对象**（`tagService`、`skillService`）：用于可归组的 CRUD 操作。Action hook（`useTagActions`、`useSkillActions`）优先使用此方式：
+
+   ```typescript
+   await tagService.createTag(name)
+   await skillService.deleteManagedSkill(skillId)
+   ```
+
+2. **直接 `invokeCommand` / `useApi().invoke`**：用于数据加载 hook（`useSkills`、`useImportFlow`、`useTheme`）中调用多个不同命令：
+
+   ```typescript
+   const { invoke } = useApi()
+   const plan = await invoke<OnboardingPlan>('get_onboarding_plan')
+   ```
+
+> Service 层和 API 层的详细规范见 [API_STANDARD.md](API_STANDARD.md)。
+
+### 3.5 useCallback 规则
 
 - 所有返回给组件的函数必须使用 `useCallback` 包装，保持引用稳定
 - `useCallback` 的依赖数组必须完整列出所有外部依赖
+- 纯 `setState` 包裹的 handler 使用空依赖数组：
 
-## 4. 组件模式
+  ```typescript
+  const handleSortChange = useCallback((value: 'manual' | 'updated' | 'name') => {
+    setSortBy(value)
+  }, [])
+  ```
 
-### 4.1 memo 优化
+## 4. Hooks 异步操作模式
+
+### 4.1 异步 Action + Loading 状态（标准模式）
+
+所有 mutating 操作（删除、创建、更新、同步等）使用统一的 try-catch-finally 模式：
+
+```typescript
+const handleConfirmDelete = useCallback(async () => {
+  if (!pendingDeleteTag) return
+  try {
+    setLoading(true)
+    setLoadingStartAt(Date.now())
+    setActionMessage(t('actions.deletingTag', { name: pendingDeleteTag.name }))
+    await tagService.deleteTag(pendingDeleteTag.id)
+    // 变更后刷新数据
+    await loadManagedSkills()
+    await loadTags(activeSkillSource)
+    setPendingDeleteTag(null)
+    setSuccessToastMessage(t('tagDeleted'))
+  } catch (err) {
+    setError(err instanceof Error ? err.message : String(err))
+  } finally {
+    setLoading(false)
+    setLoadingStartAt(null)
+    setActionMessage(null)
+  }
+}, [/* 所有引用的外部依赖 */])
+```
+
+**模式要点：**
+- `setLoading(true)` + `setLoadingStartAt(Date.now())` + `setActionMessage(...)` 在 try 顶部
+- `setLoading(false)` + `setLoadingStartAt(null)` + `setActionMessage(null)` 在 finally 中
+- 变更成功后调用 `loadManagedSkills()` / `loadTags()` 刷新数据（无缓存库，手动 re-fetch）
+- 错误通过 `setError` 传递（内部调用 `parseErrorDetail` 解析并显示 toast）
+
+### 4.2 乐观更新 + 回退（拖拽排序模式）
+
+拖拽排序使用乐观更新——先更新本地状态，API 失败时回退为全量重载：
+
+```typescript
+const reorderSkills = useCallback(async (items: ReorderItem[]) => {
+  // 乐观更新：先更新本地状态
+  setManagedSkills(prev => /* 按新顺序重排 */)
+  try {
+    await apiReorder('skills', items)
+  } catch {
+    // 失败时全量重载
+    await loadManagedSkills()
+    setError(t('errors.reorderFailed'))
+  }
+}, [loadManagedSkills, setError])
+```
+
+### 4.3 Loading 状态线程传递
+
+Loading 状态不在 Context 中集中管理。`AppContent` 持有本地 `loading` / `loadingStartAt`，向下传递给 action hook：
+
+```
+AppContent
+  ├── const [loading, setLoading] = useState(false)
+  ├── const [loadingStartAt, setLoadingStartAt] = useState<number | null>(null)
+  │
+  ├── useTagActions({ ..., setLoading, setLoadingStartAt })
+  ├── useSkillActions({ ..., setLoading, setLoadingStartAt })
+  │
+  ├── useImportFlow(...)         ← 自有 loading / loadingStartAt
+  ├── useScopeManager(...)      ← 自有 loading / loadingStartAt
+  │
+  └── 合并：
+      const globalLoading = loading || importFlow.loading || scopeManager.loading
+      const globalLoadingStartAt = loadingStartAt || importFlow.loadingStartAt || scopeManager.loadingStartAt
+```
+
+`globalLoading` 和 `globalLoadingStartAt` 传递给 `<LoadingOverlay>` 组件显示全局加载遮罩。
+
+### 4.4 并行数据加载
+
+多个独立数据源可并行加载（`Promise.all`）：
+
+```typescript
+const handleRefreshSkills = useCallback(async () => {
+  if (refreshingSkills) return  // 防止重复刷新
+  setRefreshingSkills(true)
+  try {
+    await Promise.all([
+      loadManagedSkills(),
+      loadTags(activeSkillSource),
+      loadToolSkills(),
+      loadToolStatus(),
+    ])
+  } finally {
+    setRefreshingSkills(false)
+  }
+}, [/* deps */])
+```
+
+## 5. 组件模式
+
+### 5.1 memo 优化
 
 以下组件使用 `memo()` 包装，避免不必要的重渲染：
 - `Header`、`FilterBar`、`SkillsList`、`SkillCard`
 
 **新增组件时**：如果组件接收的 props 不频繁变化，且父组件重渲染频繁，应使用 `memo()` 包装。
 
-### 4.2 弹窗模式
+### 5.2 弹窗模式
 
 - **懒加载 + 条件渲染**：所有弹窗在 `App.tsx` 中通过 `React.lazy()` 导入，包裹在 `<Suspense fallback={null}>` 中，且仅当条件满足时才渲染（如 `{tagEditorSkill ? <EditSkillTagsModal /> : null}`）
 - **非懒加载弹窗**：使用 `if (!open) return null` 提前返回
 - **禁止**在弹窗组件内部管理自己的 visible 状态（由 `ModalContext` 统一管理）
 - **懒加载组件不得通过 barrel `index.ts` 静态导出**（会导致 Vite 无法拆分 chunk）
 
-### 4.3 TFunction 传递
+### 5.3 TFunction 传递
 
 `t: TFunction` 作为 props 传入所有组件，而非在组件内部调用 `useTranslation()`：
 
@@ -118,27 +279,27 @@ function SkillCard({ skill, ... }: SkillCardProps) {
 }
 ```
 
-## 5. DTO 类型管理
+## 6. DTO 类型管理
 
-### 5.1 核心 DTO（`src/features/skills/types.ts`）
+### 6.1 核心 DTO（`src/features/skills/types.ts`）
 
 `ManagedSkill`、`OnboardingPlan`、`OnboardingGroup`、`OnboardingVariant`、`ToolOption`、`TagDto`、`TagWithCountDto`、`LocalSkillCandidate`、`InstallResultDto`、`ToolInfoDto`、`ToolStatusDto`、`SkillFileEntry`、`SkillUsage`
 
-### 5.2 API 关联 DTO（`src/lib/api.ts`）
+### 6.2 API 关联 DTO（`src/lib/api.ts`）
 
 与 API 函数紧密关联的 DTO 定义在 `api.ts` 中：
 - `ScopePreferenceDto`、`ReorderItem`
 - `DbOverview`、`DbTableInfo`、`DbColumnInfo`、`DbTableData`、`DbMaintenanceResult`
 
-### 5.3 规则
+### 6.3 规则
 
 - 新增 DTO 类型时，根据其用途选择放置位置（核心业务 → `features/skills/types.ts`，API 关联 → `lib/api.ts`）
 - 所有 DTO 字段必须使用 `snake_case`，与后端 JSON 字段完全一致
 - **禁止**使用 `camelCase` 字段名 + `toSnakeCase()` 转换
 
-## 6. i18n 规范
+## 7. i18n 规范
 
-### 6.1 初始化（`src/i18n/index.ts`）
+### 7.1 初始化（`src/i18n/index.ts`）
 
 ```typescript
 i18n.use(initReactI18next).init({
@@ -149,7 +310,7 @@ i18n.use(initReactI18next).init({
 })
 ```
 
-### 6.2 翻译资源结构（`src/i18n/resources.ts`）
+### 7.2 翻译资源结构（`src/i18n/resources.ts`）
 
 `en.translation` 和 `zh.translation` 两个语言包，嵌套命名空间：
 
@@ -178,7 +339,7 @@ i18n.use(initReactI18next).init({
 
 > 除命名空间外，`translation` 根下还有扁平 key（如 `unknown`、`subtitle`、`navMySkills`、`newSkill`、`filterSort`、`allSkills` 等）。
 
-### 6.3 规则
+### 7.3 规则
 
 - **所有用户可见文本必须使用 i18n**：`t('namespace.key')`
 - 新增功能时，必须同时添加中英文翻译
