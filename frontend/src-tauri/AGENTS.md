@@ -24,20 +24,22 @@ src-tauri/src/
 ├── error.rs             # AppError 枚举（8 变体）+ 自定义 Serialize → {ok, code, message, detail}
 ├── contracts.rs         # Tauri command 返回的 DTO/响应结构体
 │
-├── commands/            # Tauri command 层（#[tauri::command]）
-├── repositories/         # Repository 层（每表一个，封装 SQL）
-├── services/             # Service 层（业务逻辑：install、maintenance、onboarding）
-├── models/               # 数据模型（与 DB 表对应的 Rust struct）
-├── db/                   # 数据库层（connection + schema）
-├── tasks/                # 后台任务系统（TaskManager）
-├── skills/               # 技能领域模块（sync_engine、files 为实际实现；install、maintenance、onboarding 为 re-export shim，指向 services/）
-├── tools/                # 工具适配器（adapter、skill_cache）
-├── repo/                 # 社区/自定义仓库扫描与注册
-├── platform/             # 平台特定代码（windows）
-├── filesystem/           # 文件系统操作
-├── update/               # 自动更新
-└── utils/                # 工具函数（content_hash、path_safety）
+├── commands/            # Tauri command 层（#[tauri::command]）→ [src/commands/AGENTS.md](src/commands/AGENTS.md)
+├── repositories/         # Repository 层（每表一个，封装 SQL）→ [src/repositories/AGENTS.md](src/repositories/AGENTS.md)
+├── services/            # Service 层（业务逻辑：install、maintenance、onboarding）→ [src/services/AGENTS.md](src/services/AGENTS.md)
+├── models/              # 数据模型（与 DB 表对应的 Rust struct）→ [src/models/AGENTS.md](src/models/AGENTS.md)
+├── db/                  # 数据库层（connection + schema）→ [src/db/AGENTS.md](src/db/AGENTS.md)
+├── tasks/               # 后台任务系统（TaskManager）→ [src/tasks/AGENTS.md](src/tasks/AGENTS.md)
+├── skills/              # 技能领域模块（sync_engine、files + re-export shim）→ [src/skills/AGENTS.md](src/skills/AGENTS.md)
+├── tools/               # 工具适配器（adapter、skill_cache）→ [src/tools/AGENTS.md](src/tools/AGENTS.md)
+├── repo/                # 社区/自定义仓库扫描与注册 → [src/repo/AGENTS.md](src/repo/AGENTS.md)
+├── platform/            # 平台特定代码（windows）→ [src/platform/AGENTS.md](src/platform/AGENTS.md)
+├── filesystem/          # 文件系统操作 → [src/filesystem/AGENTS.md](src/filesystem/AGENTS.md)
+├── update/              # 自动更新 → [src/update/AGENTS.md](src/update/AGENTS.md)
+└── utils/               # 工具函数（content_hash、path_safety）→ [src/utils/AGENTS.md](src/utils/AGENTS.md)
 ```
+
+> **逐级加载**：每个子目录都有自己的 `AGENTS.md`，包含该目录的文件清单、硬规则和任务路由。修改某层代码时，先读对应子目录的 `AGENTS.md`，再深入具体文件。
 
 ## 3. 分层架构
 
@@ -196,15 +198,22 @@ cd frontend && npm run tauri dev             # 启动开发模式（前后端联
 
 ## 8. 任务路由
 
-| 任务类型 | 必读文件 |
-|---------|---------|
-| 新增/修改 Tauri command | `commands/*.rs` + `lib.rs`（注册） + `contracts.rs`（DTO） |
-| 新增/修改数据库操作 | `repositories/*.rs` + `models/*.rs` |
-| 数据库 schema 变更 | `db/schema.rs` + [../../docs/database-schema.md](../../docs/database-schema.md) |
-| 新增后台任务 | `tasks/mod.rs` + 对应 command |
-| 技能安装/同步逻辑 | `services/install.rs` + `skills/sync_engine.rs` |
-| 工具适配器配置 | `config.rs` + `tools/adapter.rs` + `repositories/tool_adapter_configs.rs` |
-| 前后端接口联调 | [../docs/API_STANDARD.md](../docs/API_STANDARD.md)（前端 API 规范） |
+> **逐级加载规则**：先读对应子目录的 `AGENTS.md`（含文件清单、硬规则、模板），再深入具体源文件。
+
+| 任务类型 | 先读入口 | 再读源文件 |
+|---------|---------|-----------|
+| 新增/修改 Tauri command | [src/commands/AGENTS.md](src/commands/AGENTS.md) | `commands/*.rs` + `lib.rs`（注册） + `contracts.rs`（DTO） |
+| 新增/修改数据库操作 | [src/repositories/AGENTS.md](src/repositories/AGENTS.md) + [src/models/AGENTS.md](src/models/AGENTS.md) | `repositories/*.rs` + `models/*.rs` |
+| 数据库 schema 变更 | [src/db/AGENTS.md](src/db/AGENTS.md) | `db/schema.rs` + [../../docs/database-schema.md](../../docs/database-schema.md) |
+| 新增后台任务 | [src/tasks/AGENTS.md](src/tasks/AGENTS.md) | `tasks/mod.rs` + 对应 command |
+| 技能安装/同步逻辑 | [src/services/AGENTS.md](src/services/AGENTS.md) + [src/skills/AGENTS.md](src/skills/AGENTS.md) | `services/install.rs` + `skills/sync_engine.rs` |
+| 技能文件读写 | [src/skills/AGENTS.md](src/skills/AGENTS.md) | `skills/files.rs` + `utils/mod.rs` |
+| 工具适配器配置 | [src/tools/AGENTS.md](src/tools/AGENTS.md) | `config.rs` + `tools/adapter.rs` + `repositories/tool_adapter_configs.rs` |
+| 仓库扫描注册 | [src/repo/AGENTS.md](src/repo/AGENTS.md) | `repo/scanner.rs` + `repo/community.rs` |
+| 文件系统操作 | [src/filesystem/AGENTS.md](src/filesystem/AGENTS.md) | `filesystem/mod.rs` + `utils/path_safety.rs` |
+| 平台特定代码 | [src/platform/AGENTS.md](src/platform/AGENTS.md) | `platform/mod.rs` + `platform/windows.rs` |
+| 自动更新 | [src/update/AGENTS.md](src/update/AGENTS.md) | `update/mod.rs` + `commands/update.rs` |
+| 前后端接口联调 | 本文件 § 3 | [../docs/API_STANDARD.md](../docs/API_STANDARD.md)（前端 API 规范） |
 
 ## 9. 工程规则
 
