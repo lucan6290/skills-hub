@@ -232,20 +232,40 @@ Function PageReinstall
 
   nsis_tauri_utils::SemverCompare "${VERSION}" $R0
   Pop $R0
+  ; 写入版本比较日志
+  FileOpen $R9 "$TEMP\skills-hub-install.log" a
+  ${If} $R9 != 0
+    FileSeek $R9 0 END
+    FileWrite $R9 "===== PageReinstall 版本比较 =====$\r$\n"
+    FileWrite $R9 "  当前版本: ${VERSION}$\r$\n"
+    FileWrite $R9 "  已安装版本: $R0 (WixMode=$WixMode)$\r$\n"
+  ${EndIf}
   ; Reinstalling the same version
   ${If} $R0 = 0
+    ${If} $R9 != 0
+      FileWrite $R9 "  判定: 相同版本(0)，提示重新安装或卸载$\r$\n"
+      FileClose $R9
+    ${EndIf}
     StrCpy $R1 "$(alreadyInstalledLong)"
     StrCpy $R2 "$(addOrReinstall)"
     StrCpy $R3 "$(uninstallApp)"
     !insertmacro MUI_HEADER_TEXT "$(alreadyInstalled)" "$(chooseMaintenanceOption)"
   ; Upgrading
   ${ElseIf} $R0 = 1
+    ${If} $R9 != 0
+      FileWrite $R9 "  判定: 升级(1)，提示卸载后安装$\r$\n"
+      FileClose $R9
+    ${EndIf}
     StrCpy $R1 "$(olderOrUnknownVersionInstalled)"
     StrCpy $R2 "$(uninstallBeforeInstalling)"
     StrCpy $R3 "$(dontUninstall)"
     !insertmacro MUI_HEADER_TEXT "$(alreadyInstalled)" "$(choowHowToInstall)"
   ; Downgrading
   ${ElseIf} $R0 = -1
+    ${If} $R9 != 0
+      FileWrite $R9 "  判定: 降级(-1)，ALLOWDOWNGRADES=${ALLOWDOWNGRADES}$\r$\n"
+      FileClose $R9
+    ${EndIf}
     StrCpy $R1 "$(newerVersionInstalled)"
     StrCpy $R2 "$(uninstallBeforeInstalling)"
     !if "${ALLOWDOWNGRADES}" == "true"
@@ -255,6 +275,10 @@ Function PageReinstall
     !endif
     !insertmacro MUI_HEADER_TEXT "$(alreadyInstalled)" "$(choowHowToInstall)"
   ${Else}
+    ${If} $R9 != 0
+      FileWrite $R9 "  判定: 未知比较结果($R0)，中止$\r$\n"
+      FileClose $R9
+    ${EndIf}
     Abort
   ${EndIf}
 
@@ -361,6 +385,18 @@ Function PageLeaveReinstall
     ${EndIf}
 
     BringToFront
+
+    ; 写入卸载退出码日志
+    FileOpen $R9 "$TEMP\skills-hub-install.log" a
+    ${If} $R9 != 0
+      FileSeek $R9 0 END
+      FileWrite $R9 "===== PageLeaveReinstall 卸载旧版本 =====$\r$\n"
+      FileWrite $R9 "  卸载命令退出码: $0$\r$\n"
+      ${If} $WixMode = 1
+        FileWrite $R9 "  WixMode=1$\r$\n"
+      ${EndIf}
+      FileClose $R9
+    ${EndIf}
 
     ${IfThen} ${Errors} ${|} StrCpy $0 2 ${|} ; ExecWait failed, set fake exit code
 
@@ -545,6 +581,15 @@ Section EarlyChecks
   ${If} ${Silent}
     ; If downgrading
     ${If} $R0 = -1
+      ; 写入降级中止日志
+      FileOpen $R9 "$TEMP\skills-hub-install.log" a
+      ${If} $R9 != 0
+        FileSeek $R9 0 END
+        FileWrite $R9 "===== EarlyChecks 降级中止 =====$\r$\n"
+        FileWrite $R9 "  静默安装模式下检测到降级($R0=-1)，ALLOWDOWNGRADES=false，中止安装$\r$\n"
+        FileWrite $R9 "=============================$\r$\n"
+        FileClose $R9
+      ${EndIf}
       System::Call 'kernel32::AttachConsole(i -1)i.r0'
       ${If} $0 <> 0
         System::Call 'kernel32::GetStdHandle(i -11)i.r0'
@@ -569,6 +614,17 @@ Section WebView2
     ReadRegStr $4 HKCU "SOFTWARE\Microsoft\EdgeUpdate\Clients\${WEBVIEW2APPGUID}" "pv"
   ${EndIf}
 
+  ; 写入 WebView2 检测日志
+  FileOpen $R9 "$TEMP\skills-hub-install.log" a
+  ${If} $R9 != 0
+    FileSeek $R9 0 END
+    FileWrite $R9 "===== WebView2 检测 =====$\r$\n"
+    FileWrite $R9 "  已安装版本: $4$\r$\n"
+    FileWrite $R9 "  INSTALLWEBVIEW2MODE: ${INSTALLWEBVIEW2MODE}$\r$\n"
+    FileWrite $R9 "  UpdateMode: $UpdateMode$\r$\n"
+    FileClose $R9
+  ${EndIf}
+
   ${If} $4 == ""
     ; Webview2 installation
     ;
@@ -579,6 +635,13 @@ Section WebView2
         DetailPrint "$(webview2Downloading)"
         NSISdl::download "https://go.microsoft.com/fwlink/p/?LinkId=2124703" "$TEMP\MicrosoftEdgeWebview2Setup.exe"
         Pop $0
+        ; 写入下载结果日志
+        FileOpen $R9 "$TEMP\skills-hub-install.log" a
+        ${If} $R9 != 0
+          FileSeek $R9 0 END
+          FileWrite $R9 "  [WebView2] 下载Bootstrapper结果: $0$\r$\n"
+          FileClose $R9
+        ${EndIf}
         ${If} $0 == "success"
           DetailPrint "$(webview2DownloadSuccess)"
         ${Else}
@@ -611,6 +674,13 @@ Section WebView2
         DetailPrint "$(installingWebview2)"
         ; $6 holds the path to the webview2 installer
         ExecWait "$6 ${WEBVIEW2INSTALLERARGS} /install" $1
+        ; 写入安装退出码日志
+        FileOpen $R9 "$TEMP\skills-hub-install.log" a
+        ${If} $R9 != 0
+          FileSeek $R9 0 END
+          FileWrite $R9 "  [WebView2] 安装器退出码: $1$\r$\n"
+          FileClose $R9
+        ${EndIf}
         ${If} $1 = 0
           DetailPrint "$(webview2InstallSuccess)"
         ${Else}
@@ -622,6 +692,15 @@ Section WebView2
   ${Else}
     !if "${MINIMUMWEBVIEW2VERSION}" != ""
       ${VersionCompare} "${MINIMUMWEBVIEW2VERSION}" "$4" $R0
+      ; 写入版本检查日志
+      FileOpen $R9 "$TEMP\skills-hub-install.log" a
+      ${If} $R9 != 0
+        FileSeek $R9 0 END
+        FileWrite $R9 "  [WebView2] 最低版本要求: ${MINIMUMWEBVIEW2VERSION}$\r$\n"
+        FileWrite $R9 "  [WebView2] 已安装版本: $4$\r$\n"
+        FileWrite $R9 "  [WebView2] VersionCompare 结果: $R0 (1=需更新)$\r$\n"
+        FileClose $R9
+      ${EndIf}
       ${If} $R0 = 1
         update_webview:
           DetailPrint "$(installingWebview2)"
@@ -637,6 +716,13 @@ Section WebView2
             ; Chromium updater docs: https://source.chromium.org/chromium/chromium/src/+/main:docs/updater/user_manual.md
             ; Modified from "HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft EdgeWebView\ModifyPath"
             ExecWait `"$R1" /install appguid=${WEBVIEW2APPGUID}&needsadmin=true` $1
+            ; 写入更新退出码日志
+            FileOpen $R9 "$TEMP\skills-hub-install.log" a
+            ${If} $R9 != 0
+              FileSeek $R9 0 END
+              FileWrite $R9 "  [WebView2] 更新退出码: $1$\r$\n"
+              FileClose $R9
+            ${EndIf}
             ${If} $1 = 0
               DetailPrint "$(webview2InstallSuccess)"
             ${Else}
@@ -911,8 +997,27 @@ SectionEnd
 
 Function RestorePreviousInstallLocation
   ReadRegStr $4 SHCTX "${MANUPRODUCTKEY}" ""
+  ; 写入安装日志
+  FileOpen $R9 "$TEMP\skills-hub-install.log" a
+  ${If} $R9 != 0
+    FileSeek $R9 0 END
+    FileWrite $R9 "  [RestorePreviousInstallLocation] 注册表读取路径: SHCTX\${MANUPRODUCTKEY}$\r$\n"
+    FileWrite $R9 "  [RestorePreviousInstallLocation] 注册表值: $4$\r$\n"
+    FileClose $R9
+  ${EndIf}
   StrCmp $4 "" +2 0
     StrCpy $INSTDIR $4
+  ; 记录最终 INSTDIR
+  FileOpen $R9 "$TEMP\skills-hub-install.log" a
+  ${If} $R9 != 0
+    FileSeek $R9 0 END
+    ${If} $4 == ""
+      FileWrite $R9 "  [RestorePreviousInstallLocation] 注册表为空，保持当前 INSTDIR: $INSTDIR$\r$\n"
+    ${Else}
+      FileWrite $R9 "  [RestorePreviousInstallLocation] 恢复上次路径 INSTDIR: $INSTDIR$\r$\n"
+    ${EndIf}
+    FileClose $R9
+  ${EndIf}
 FunctionEnd
 
 Function Skip
