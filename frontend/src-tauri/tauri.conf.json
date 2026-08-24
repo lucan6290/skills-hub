@@ -42,7 +42,7 @@
     "windows": {
       "nsis": {
         "installerIcon": "icons/icon.ico",
-        "installerHooks": "nsis/install-dir.nsh",
+        "template": "nsis/custom-installer.nsi",
         "installMode": "perMachine",
         "languages": ["SimpChinese", "English"],
         "displayLanguageSelector": true
