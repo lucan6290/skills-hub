@@ -18,7 +18,7 @@ src/
 │   ├── skills/            # components/ hooks/ modals/ types.ts index.ts
 │   ├── tags/              # components/
 │   ├── settings/          # components/ hooks/ index.ts
-│   ├── tools/             # components/ modals/ index.ts
+│   ├── tools/             # components/ modals/
 │   ├── import-flow/       # components/ hooks/ index.ts
 │   └── database/          # components/ index.ts
 ├── services/              # Service 层（tagService、skillService）封装 API 调用

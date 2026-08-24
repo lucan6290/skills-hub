@@ -30,7 +30,7 @@ src-tauri/src/
 ├── models/               # 数据模型（与 DB 表对应的 Rust struct）
 ├── db/                   # 数据库层（connection + schema）
 ├── tasks/                # 后台任务系统（TaskManager）
-├── skills/               # 技能领域模块（sync_engine、install、maintenance、files、onboarding）
+├── skills/               # 技能领域模块（sync_engine、files 为实际实现；install、maintenance、onboarding 为 re-export shim，指向 services/）
 ├── tools/                # 工具适配器（adapter、skill_cache）
 ├── repo/                 # 社区/自定义仓库扫描与注册
 ├── platform/             # 平台特定代码（windows）
@@ -167,7 +167,7 @@ return Err(AppError::InvalidInput(format!("...")));
 | Rust struct 字段 | `snake_case` | `community_path`, `sort_order`, `created_at` |
 | Repository 结构体 | `PascalCase` | `SkillsRepository`, `TagsRepository` |
 | Model 结构体 | `PascalCase` | `Skill`, `TagWithCount`, `ToolAdapterConfig` |
-| DTO 结构体 | `PascalCase` + `Dto` 后缀 | `ManagedSkillDto`, `ToolStatusDto`, `DbOverview` |
+| DTO 结构体 | `PascalCase`（部分用 `Dto` 后缀） | `ManagedSkillDto`, `ToolStatusDto`, `DbOverview`, `OkResponse`, `ReorderItem` |
 | 模块文件名 | `snake_case` | `skill_usage.rs`, `tool_adapter_config.rs` |
 | 常量 | `SCREAMING_SNAKE_CASE` | `DB_FILE_NAME`, `LEGACY_APP_IDENTIFIERS` |
 
