@@ -67,7 +67,7 @@ skills-hub/
 | 涉及范围 | 必读入口 |
 |---------|---------|
 | 前端代码（组件/样式/API 调用/DTO） | [frontend/AGENTS.md](frontend/AGENTS.md) |
-| Rust 后端代码（commands/repositories/services） | [frontend/src-tauri/](frontend/src-tauri/) |
+| Rust 后端代码（commands/repositories/services） | [frontend/src-tauri/AGENTS.md](frontend/src-tauri/AGENTS.md) |
 | 数据库表结构（字段详情） | [docs/database-schema.md](docs/database-schema.md) |
 | 仅文档修改 | 直接修改对应文档 |
 
