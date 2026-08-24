@@ -500,12 +500,36 @@ Function .onInit
     ; Set default install location - D drive preferred, C drive fallback
     ; GetDriveTypeW: 0=unknown, 1=no_root, 2=removable, 3=fixed, 4=remote, 5=cdrom, 6=ramdisk
     System::Call 'kernel32::GetDriveTypeW(w "D:\\") i .r0'
+
+    ; 写入安装日志到 $TEMP\skills-hub-install.log
+    FileOpen $R1 "$TEMP\skills-hub-install.log" a
+    ${If} $R1 != 0
+      FileSeek $R1 0 END
+      FileWrite $R1 "===== .onInit 路径判断 =====$\r$\n"
+      FileWrite $R1 "  INSTDIR 初始值: $INSTDIR$\r$\n"
+      FileWrite $R1 "  GetDriveTypeW(D:\\) 返回值: $0$\r$\n"
+      FileWrite $R1 "  (0=未知, 1=无根目录, 2=可移动, 3=固定硬盘, 4=网络, 5=光驱, 6=内存盘)$\r$\n"
+    ${EndIf}
+
     ${If} $0 == 3
       StrCpy $INSTDIR "D:\skills-hub"
+      ${If} $R1 != 0
+        FileWrite $R1 "  判定: D 盘为固定硬盘，默认路径设为 D:\skills-hub$\r$\n"
+      ${EndIf}
     ${Else}
       StrCpy $INSTDIR "C:\skills-hub"
+      ${If} $R1 != 0
+        FileWrite $R1 "  判定: D 盘不可用(type=$0)，默认路径设为 C:\skills-hub$\r$\n"
+      ${EndIf}
     ${EndIf}
+
     Call RestorePreviousInstallLocation
+
+    ${If} $R1 != 0
+      FileWrite $R1 "  RestorePreviousInstallLocation 后 INSTDIR: $INSTDIR$\r$\n"
+      FileWrite $R1 "=============================$\r$\n"
+      FileClose $R1
+    ${EndIf}
   ${EndIf}
 
 
