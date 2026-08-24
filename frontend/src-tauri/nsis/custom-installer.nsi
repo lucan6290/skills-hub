@@ -498,12 +498,13 @@ Function .onInit
 
   ${If} $INSTDIR == "${PLACEHOLDER_INSTALL_DIR}"
     ; Set default install location - D drive preferred, C drive fallback
-    IfFileExists "D:\*.*" use_d_drive 0
-      StrCpy $INSTDIR "C:\skills-hub"
-      Goto check_restore
-    use_d_drive:
+    ; GetDriveTypeW: 0=unknown, 1=no_root, 2=removable, 3=fixed, 4=remote, 5=cdrom, 6=ramdisk
+    System::Call 'kernel32::GetDriveTypeW(w "D:\\") i .r0'
+    ${If} $0 == 3
       StrCpy $INSTDIR "D:\skills-hub"
-    check_restore:
+    ${Else}
+      StrCpy $INSTDIR "C:\skills-hub"
+    ${EndIf}
     Call RestorePreviousInstallLocation
   ${EndIf}
 
