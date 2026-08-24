@@ -73,4 +73,7 @@ lucan-docs/
 # Rust/Tauri build artifacts
 frontend/src-tauri/target/
 
+# Tauri signing key (keep private!)
+.tauri/
+
 backend/static/
