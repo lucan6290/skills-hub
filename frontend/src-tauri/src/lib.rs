@@ -16,7 +16,7 @@ pub mod tools;
 pub mod update;
 pub mod utils;
 
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::Manager;
 
@@ -159,11 +159,26 @@ pub fn run() {
 
 /// Build the system tray icon with a context menu.
 fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
+    let version = app.package_info().version.to_string();
+    let version_label = format!("Skills Hub v{}", version);
+
     let menu = Menu::new(app)?;
+
+    // --- Version info (disabled item) ---
+    menu.append(&MenuItem::with_id(
+        app,
+        "version",
+        &version_label,
+        false,
+        None::<&str>,
+    )?)?;
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+
+    // --- Window controls ---
     menu.append(&MenuItem::with_id(
         app,
         "show",
-        "显示 Skills Hub",
+        "显示窗口",
         true,
         None::<&str>,
     )?)?;
@@ -175,6 +190,47 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
         None::<&str>,
     )?)?;
     menu.append(&PredefinedMenuItem::separator(app)?)?;
+
+    // --- Update & web ---
+    menu.append(&MenuItem::with_id(
+        app,
+        "check_update",
+        "检查更新",
+        true,
+        None::<&str>,
+    )?)?;
+    menu.append(&MenuItem::with_id(
+        app,
+        "open_website",
+        "打开官方网站",
+        true,
+        None::<&str>,
+    )?)?;
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+
+    // --- Open directory submenu ---
+    let dir_submenu = Submenu::with_items(
+        app,
+        "打开目录",
+        true,
+        &[
+            &MenuItem::with_id(app, "open_app_dir", "应用目录", true, None::<&str>)?,
+            &MenuItem::with_id(app, "open_data_dir", "工作目录", true, None::<&str>)?,
+            &MenuItem::with_id(app, "open_resource_dir", "内核目录", true, None::<&str>)?,
+            &MenuItem::with_id(app, "open_log_dir", "日志目录", true, None::<&str>)?,
+        ],
+    )?;
+    menu.append(&dir_submenu)?;
+    menu.append(&PredefinedMenuItem::separator(app)?)?;
+
+    // --- App lifecycle ---
+    menu.append(&MenuItem::with_id(
+        app,
+        "restart",
+        "重启应用",
+        true,
+        None::<&str>,
+    )?)?;
     menu.append(&MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?)?;
 
     let icon = app
@@ -191,6 +247,13 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
             "new_window" => {
                 let _ = crate::commands::misc::create_new_window(app);
             }
+            "check_update" => tray_check_update(app),
+            "open_website" => open_url("https://github.com/lucan6290/skills-hub"),
+            "open_app_dir" => open_app_directory(app, AppDir::App),
+            "open_data_dir" => open_app_directory(app, AppDir::Data),
+            "open_resource_dir" => open_app_directory(app, AppDir::Resource),
+            "open_log_dir" => open_app_directory(app, AppDir::Log),
+            "restart" => app.restart(),
             "quit" => app.exit(0),
             _ => {}
         })
@@ -206,6 +269,89 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
         })
         .build(app)?;
     Ok(())
+}
+
+/// Directory types for the tray "打开目录" submenu.
+enum AppDir {
+    App,
+    Data,
+    Resource,
+    Log,
+}
+
+/// Resolve and open a specific app directory in the system file manager.
+fn open_app_directory(app: &tauri::AppHandle, dir: AppDir) {
+    let path = match dir {
+        AppDir::App => std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf())),
+        AppDir::Data => Some(crate::config::resolve_data_dir()),
+        AppDir::Resource => app.path().resource_dir().ok(),
+        AppDir::Log => app.path().app_log_dir().ok(),
+    };
+
+    let Some(path) = path else {
+        eprintln!("[warn] 无法解析目录路径");
+        return;
+    };
+
+    if !path.exists() {
+        if let Err(e) = std::fs::create_dir_all(&path) {
+            eprintln!("[warn] 无法创建目录 {}: {}", path.display(), e);
+            return;
+        }
+    }
+
+    if let Err(e) = crate::filesystem::open_folder(&path) {
+        eprintln!("[warn] 无法打开目录 {}: {}", path.display(), e);
+    }
+}
+
+/// Open a URL in the system default browser.
+fn open_url(url: &str) {
+    #[cfg(windows)]
+    {
+        let _ = std::process::Command::new("cmd")
+            .args(["/c", "start", "", url])
+            .spawn();
+    }
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("open").arg(url).spawn();
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let _ = std::process::Command::new("xdg-open").arg(url).spawn();
+    }
+}
+
+/// Check for updates from the tray menu, showing a system notification with the result.
+fn tray_check_update(app: &tauri::AppHandle) {
+    use tauri_plugin_notification::NotificationExt;
+
+    let app_handle = app.clone();
+    std::thread::spawn(move || {
+        let version = app_handle.package_info().version.to_string();
+        let result = crate::update::check_for_update(&version, "tray");
+
+        let (title, body) = if let Some(err) = &result.error {
+            ("检查更新失败".to_string(), err.clone())
+        } else if result.update_available {
+            (
+                "发现新版本".to_string(),
+                format!("v{} → v{}\n点击应用内更新按钮进行安装", result.current_version, result.latest_version),
+            )
+        } else {
+            ("已是最新版本".to_string(), format!("v{}", result.current_version))
+        };
+
+        let _ = app_handle
+            .notification()
+            .builder()
+            .title(&title)
+            .body(&body)
+            .show();
+    });
 }
 
 /// Register the global hotkey Ctrl+Shift+Space to show/focus the main window.
