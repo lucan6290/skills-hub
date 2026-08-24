@@ -55,7 +55,6 @@
       }
     },
     "updater": {
-      "pubkey": "",
       "endpoints": [
         "https://github.com/lucan6290/skills-hub/releases/latest/download/latest.json"
       ]

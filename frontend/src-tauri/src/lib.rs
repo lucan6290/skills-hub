@@ -48,9 +48,25 @@ pub fn run() {
         .setup(|app| {
             build_tray(app.handle())?;
 
+            // Intercept the close button: hide the window instead of quitting
+            // so the app stays resident in the system tray.
+            let main_window = app
+                .get_webview_window("main")
+                .expect("main window not found");
+            main_window.on_window_event(move |event| {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = main_window.hide();
+                }
+            });
+
             #[cfg(desktop)]
             {
-                register_global_shortcut(app.handle())?;
+                // Non-fatal: if the hotkey is already taken by another app,
+                // log a warning instead of crashing the entire setup.
+                if let Err(e) = register_global_shortcut(app.handle()) {
+                    eprintln!("[warn] 全局快捷键注册失败: {e}");
+                }
             }
 
             // Register the skillshub:// scheme at runtime on Windows/Linux.
