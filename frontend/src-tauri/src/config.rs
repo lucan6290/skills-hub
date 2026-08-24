@@ -538,32 +538,10 @@ pub fn resolve_data_dir() -> PathBuf {
         }
     }
 
-    #[cfg(target_os = "windows")]
-    {
-        let base = env::var("APPDATA")
-            .unwrap_or_else(|_| env::var("USERPROFILE").unwrap_or_else(|_| ".".to_string()));
-        PathBuf::from(base).join("skills-hub")
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        let home = env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join("Library/Application Support/skills-hub")
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        let base = env::var("XDG_DATA_HOME").unwrap_or_else(|_| {
-            let home = env::var("HOME").unwrap_or_else(|_| ".".to_string());
-            format!("{}/.local/share", home)
-        });
-        PathBuf::from(base).join("skills-hub")
-    }
-
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    {
-        PathBuf::from(".").join("data")
-    }
+    let home = env::var("HOME")
+        .or_else(|_| env::var("USERPROFILE"))
+        .unwrap_or_else(|_| ".".to_string());
+    PathBuf::from(home).join(".skills-hub")
 }
 
 fn get_exe_dir() -> Option<PathBuf> {
