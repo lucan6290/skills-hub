@@ -18,6 +18,7 @@ path = "src/main.rs"
 tauri-build = { version = "=2.6.3", features = [] }
 
 [dependencies]
+log = "0.4"
 regex = "1"
 reqwest = { version = "0.12", features = ["json", "blocking"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
@@ -28,6 +29,7 @@ tauri = { version = "=2.11.5", features = ["tray-icon"] }
 tauri-plugin-autostart = "2.5.1"
 tauri-plugin-deep-link = "2.4.9"
 tauri-plugin-global-shortcut = "2.3.2"
+tauri-plugin-log = "2"
 tauri-plugin-notification = "2.3.3"
 tauri-plugin-single-instance = { version = "=2.4.3", features = ["deep-link"] }
 tauri-plugin-updater = "2.10.1"

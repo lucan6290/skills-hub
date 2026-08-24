@@ -19,9 +19,21 @@ pub mod utils;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::Manager;
+use tauri_plugin_log::{Target, TargetKind};
 
 pub fn run() {
+    let log_dir = crate::config::resolve_data_dir().join("logs");
+    let _ = std::fs::create_dir_all(&log_dir);
+
     tauri::Builder::default()
+        .plugin(tauri_plugin_log::Builder::new().targets([
+            Target::new(TargetKind::Stdout),
+            Target::new(TargetKind::Folder {
+                path: log_dir,
+                file_name: Some("skills-hub".to_string()),
+            }),
+            Target::new(TargetKind::Webview),
+        ]).build())
         // single-instance must be the first plugin; the deep-link feature forwards
         // scheme URLs from a second process to the running instance.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -65,7 +77,7 @@ pub fn run() {
                 // Non-fatal: if the hotkey is already taken by another app,
                 // log a warning instead of crashing the entire setup.
                 if let Err(e) = register_global_shortcut(app.handle()) {
-                    eprintln!("[warn] 全局快捷键注册失败: {e}");
+                    log::warn!("全局快捷键注册失败: {e}");
                 }
             }
 
@@ -287,23 +299,23 @@ fn open_app_directory(app: &tauri::AppHandle, dir: AppDir) {
             .and_then(|p| p.parent().map(|p| p.to_path_buf())),
         AppDir::Data => Some(crate::config::resolve_data_dir()),
         AppDir::Resource => app.path().resource_dir().ok(),
-        AppDir::Log => app.path().app_log_dir().ok(),
+        AppDir::Log => Some(crate::config::resolve_data_dir().join("logs")),
     };
 
     let Some(path) = path else {
-        eprintln!("[warn] 无法解析目录路径");
+        log::warn!("无法解析目录路径");
         return;
     };
 
     if !path.exists() {
         if let Err(e) = std::fs::create_dir_all(&path) {
-            eprintln!("[warn] 无法创建目录 {}: {}", path.display(), e);
+            log::warn!("无法创建目录 {}: {}", path.display(), e);
             return;
         }
     }
 
     if let Err(e) = crate::filesystem::open_folder(&path) {
-        eprintln!("[warn] 无法打开目录 {}: {}", path.display(), e);
+        log::warn!("无法打开目录 {}: {}", path.display(), e);
     }
 }
 
