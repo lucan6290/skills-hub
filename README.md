@@ -30,13 +30,17 @@
 - Rust 1.77+（stable）
 - [Tauri Prerequisites](https://v2.tauri.app/start/prerequisites/)
 
-### 开发模式
+### 首次启动
 
 ```bash
 cd frontend
 npm install
-npm run tauri dev              # Vite HMR + Tauri 桌面窗口
+npm run tauri dev
 ```
+
+`npm run tauri dev` 会同时启动 Vite 开发服务器（http://127.0.0.1:5173）和 Tauri 桌面窗口，并监听 Rust 代码变更热重载。
+
+> **关于更新签名密钥**：应用集成了 `tauri-plugin-updater`，Tauri 要求 `tauri.conf.json` 中 `plugins.updater.pubkey` 必须存在，否则插件初始化会 panic。**公钥已提交到仓库**，开发者克隆后无需额外配置即可启动。私钥保存在 `.tauri/skills-hub.key`（已加入 `.gitignore`），仅维护者在构建签名发布包时需要。
 
 ### 构建生产版本
 
