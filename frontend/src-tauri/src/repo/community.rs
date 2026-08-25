@@ -4,10 +4,10 @@ use std::path::PathBuf;
 
 use crate::db::Database;
 
-pub const DEFAULT_COMMUNITY_REPO_NAME: &str = "skills";
+pub const DEFAULT_COMMUNITY_REPO_NAME: &str = "community-skills";
 
 /// Resolve the Community Repo path.
-/// Priority: DB setting > ~/.skillshub/skills (default).
+/// Priority: DB setting > ~/.skillshub/community-skills (default).
 pub fn resolve_community_repo_path(db: &Database) -> PathBuf {
     use crate::repositories::SettingsRepository;
     let repo = SettingsRepository::new(db);
