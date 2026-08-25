@@ -794,6 +794,10 @@
     gap: 20px;
   }
 
+  .settings-v2-group-label {
+    margin-bottom: -8px;
+  }
+
   .settings-v2-card {
     padding: 16px 16px;
     border-radius: 12px;
@@ -815,11 +819,74 @@
     border-radius: 8px;
   }
 
+  .settings-v2-card-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+
   .settings-v2-path-row {
     flex-wrap: wrap;
   }
 
   .settings-v2-path {
     min-width: 100%;
+  }
+
+  .settings-v2-proxy-row {
+    flex-wrap: wrap;
+  }
+
+  .settings-v2-proxy-input {
+    min-width: 100%;
+  }
+
+  .settings-v2-about {
+    padding: 24px 16px;
+  }
+
+  .settings-v2-about-logo-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+  }
+
+  .settings-v2-about-logo {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 420px) {
+  .settings-v2-card-header {
+    gap: 10px;
+  }
+
+  .settings-v2-card-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+  }
+
+  .settings-v2-card-icon svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .settings-v2-seg-btn {
+    padding: 7px 6px;
+    font-size: 11.5px;
+    gap: 4px;
+  }
+
+  .settings-v2-seg-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .settings-v2-section-title {
+    font-size: 14px;
+  }
+
+  .settings-v2-section-desc {
+    font-size: 12px;
   }
 }
