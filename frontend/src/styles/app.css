@@ -23,14 +23,16 @@
 .header-left {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
   height: 100%;
+  min-width: 0;
 }
 
 .brand-area {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .header-stats {
@@ -79,8 +81,8 @@
   height: 100%;
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 14px;
+  gap: 5px;
+  padding: 0 10px;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-tertiary);
@@ -90,6 +92,8 @@
   position: relative;
   transition: color var(--transition-base) var(--ease-out);
   font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .nav-tab:hover {
@@ -844,12 +848,12 @@
 
 .header-left {
   min-width: 0;
-  gap: clamp(16px, 3vw, 34px);
+  gap: 16px;
 }
 
 .brand-area {
   gap: 12px;
-  min-width: 236px;
+  min-width: 0;
 }
 
 .brand-text {
@@ -870,9 +874,9 @@
 
 .header-stat {
   height: 100%;
-  padding: 0 12px;
+  padding: 0 8px;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .header-stat-value {
@@ -902,10 +906,12 @@
 
 .nav-tab {
   height: 32px;
-  padding: 0 12px;
+  padding: 0 9px;
   border-radius: 6px;
   color: var(--text-secondary);
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .nav-tab:hover {
@@ -938,8 +944,8 @@
   height: 32px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 12px;
+  gap: 6px;
+  padding: 0 9px;
   border: 0;
   border-radius: 6px;
   color: var(--text-secondary);
@@ -948,6 +954,8 @@
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .source-tab span {
