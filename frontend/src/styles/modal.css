@@ -96,20 +96,23 @@
 .modal-icon-btn {
   width: 40px;
   height: 40px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--glass-border);
   border-radius: 8px;
-  background: var(--bg-panel);
+  background: var(--glass-bg-subtle);
+  backdrop-filter: var(--glass-blur-sm);
   color: var(--text-secondary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: all var(--transition-base) var(--ease-out);
 }
 
 .modal-icon-btn:hover {
   color: var(--text-primary);
-  border-color: var(--border-strong);
-  background: var(--bg-element);
+  border-color: var(--glass-border-strong);
+  background: var(--glass-bg-strong);
+  transform: translateY(-1px);
 }
 
 
@@ -121,24 +124,26 @@
 
 
 .modal-backdrop {
-  background: rgba(31, 41, 51, 0.28);
-  backdrop-filter: blur(12px) saturate(1.1);
+  background: rgba(31, 41, 51, 0.32);
+  backdrop-filter: var(--glass-blur-lg);
   animation: modal-backdrop-enter var(--transition-base) var(--ease-out);
 }
 
 :root[data-theme='dark'] .modal-backdrop {
-  background: rgba(0, 0, 0, 0.46);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .modal {
   border-radius: 8px;
-  background: var(--bg-panel);
-  box-shadow: var(--shadow-lg);
+  border-color: var(--glass-border-strong);
+  background: var(--glass-bg-strong);
+  box-shadow: var(--glass-shadow-lg);
+  backdrop-filter: var(--glass-blur-lg);
 }
 
 .modal-header,
 .modal-footer {
-  background: color-mix(in srgb, var(--bg-element) 42%, transparent);
+  background: var(--glass-bg-subtle);
 }
 
 .modal-title {
@@ -149,9 +154,13 @@
   width: 30px;
   height: 30px;
   border-radius: 8px;
+  background: var(--glass-bg-subtle);
+  border: 1px solid var(--glass-border);
+  transition: all var(--transition-base) var(--ease-out);
 }
 
 .modal-close:hover {
   color: var(--accent-primary);
   background: var(--accent-soft-bg);
+  border-color: var(--accent-soft-border);
 }

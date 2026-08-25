@@ -240,8 +240,9 @@
 .lang-btn,
 .icon-btn {
   border-radius: 8px;
-  background: color-mix(in srgb, var(--bg-panel) 70%, transparent);
-  border-color: var(--border-subtle);
+  background: var(--glass-bg-subtle);
+  border-color: var(--glass-border);
+  backdrop-filter: var(--glass-blur-sm);
 }
 
 .icon-btn.active,
@@ -250,6 +251,7 @@
   color: var(--accent-primary);
   border-color: var(--accent-soft-border);
   background: var(--accent-soft-bg);
+  box-shadow: var(--glow-accent-sm);
   transform: none;
 }
 
@@ -261,18 +263,20 @@
 .btn-primary {
   border-color: var(--accent-primary);
   background: linear-gradient(180deg, var(--accent-primary), var(--accent-primary-hover));
+  box-shadow: 0 4px 6px -1px var(--accent-primary-shadow);
 }
 
 .btn-primary:hover {
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-sm), var(--glow-accent-sm);
   transform: none;
 }
 
 .btn-secondary,
 .sort-btn,
 .tag-filter-btn {
-  border-color: var(--border-subtle);
-  background: color-mix(in srgb, var(--bg-panel) 72%, transparent);
+  border-color: var(--glass-border);
+  background: var(--glass-bg-subtle);
+  backdrop-filter: var(--glass-blur-sm);
 }
 
 .tool-filter-btn {
@@ -282,8 +286,8 @@
 .btn-secondary:hover,
 .sort-btn:hover,
 .tag-filter-btn:hover {
-  border-color: var(--border-strong);
-  background: var(--bg-element);
+  border-color: var(--glass-border-strong);
+  background: var(--glass-bg-strong);
 }
 
 .card-btn {

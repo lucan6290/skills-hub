@@ -300,11 +300,11 @@
 
 .explore-search-row {
   padding: 12px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--glass-border);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--bg-panel) 88%, transparent);
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(14px) saturate(1.1);
+  background: var(--glass-bg-strong);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur-md);
 }
 
 .explore-search-input {
@@ -352,11 +352,13 @@
   position: relative;
   min-height: 148px;
   border-radius: 8px;
-  border-color: color-mix(in srgb, var(--border-subtle) 86%, transparent);
+  border-color: var(--glass-border);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--accent-soft-bg) 26%, transparent), transparent 52%),
-    color-mix(in srgb, var(--bg-panel) 88%, transparent);
-  box-shadow: 0 1px 0 var(--highlight-inset) inset;
+    var(--glass-bg-strong);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-blur-sm);
+  transition: all var(--transition-base) var(--ease-out);
 }
 
 .explore-card::before {
@@ -372,9 +374,9 @@
 }
 
 .explore-card:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-1px);
+  border-color: var(--glass-border-strong);
+  box-shadow: var(--glass-shadow-lg), var(--glow-accent-md);
+  transform: translateY(-2px);
 }
 
 .explore-card-name {
@@ -390,14 +392,17 @@
   width: 28px;
   height: 28px;
   justify-content: center;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--glass-border);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--bg-panel) 70%, transparent);
+  background: var(--glass-bg-subtle);
+  backdrop-filter: var(--glass-blur-sm);
+  transition: all var(--transition-base) var(--ease-out);
 }
 
 .explore-card-link:hover {
   border-color: var(--accent-soft-border);
   background: var(--accent-soft-bg);
+  box-shadow: var(--glow-accent-sm);
 }
 
 .explore-btn-install,
@@ -409,22 +414,31 @@
 .explore-btn-install {
   background: linear-gradient(180deg, var(--accent-primary), var(--accent-primary-hover));
   color: var(--accent-primary-fg);
+  box-shadow: 0 2px 6px -1px var(--accent-primary-shadow);
+  transition: all var(--transition-base) var(--ease-out);
+}
+
+.explore-btn-install:hover {
+  box-shadow: 0 4px 10px -2px var(--accent-primary-shadow-strong), var(--glow-accent-sm);
+  transform: translateY(-1px);
 }
 
 .explore-btn-installed {
   border-color: var(--success-soft-border);
   background: var(--success-soft-bg);
+  box-shadow: 0 0 8px -4px color-mix(in srgb, var(--status-success) 30%, transparent);
 }
 
 .explore-loading,
 .explore-empty,
 .tools-loading {
   min-height: 180px;
-  border: 1px dashed var(--border-subtle);
+  border: 1px dashed var(--glass-border);
   border-radius: 8px;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--accent-soft-bg) 38%, transparent), transparent),
-    color-mix(in srgb, var(--bg-panel) 72%, transparent);
+    var(--glass-bg-subtle);
+  backdrop-filter: var(--glass-blur-sm);
 }
 
 .source-choice-group {
@@ -439,12 +453,14 @@
   gap: 4px;
   min-height: 76px;
   padding: 12px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--glass-border);
   border-radius: 10px;
   color: var(--text-secondary);
-  background: var(--bg-panel);
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur-sm);
   text-align: left;
   cursor: pointer;
+  transition: all var(--transition-base) var(--ease-out);
 }
 
 .source-choice strong {
@@ -458,10 +474,16 @@
   line-height: 1.4;
 }
 
-.source-choice:hover,
+.source-choice:hover {
+  border-color: var(--glass-border-strong);
+  box-shadow: var(--glass-shadow);
+  transform: translateY(-1px);
+}
+
 .source-choice.active {
   border-color: var(--accent-soft-border);
   background: var(--accent-soft-bg);
+  box-shadow: var(--glow-accent-sm);
 }
 
 .source-choice.active strong {
