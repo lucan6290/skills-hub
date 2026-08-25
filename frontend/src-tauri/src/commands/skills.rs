@@ -1,4 +1,4 @@
-﻿use tauri::State;
+use tauri::State;
 
 use crate::contracts::ManagedSkillDto;
 use crate::error::{AppError, AppResult};
@@ -19,7 +19,11 @@ pub async fn get_managed_skills(
     source_type: Option<String>,
     sort: Option<String>,
 ) -> AppResult<Vec<ManagedSkillDto>> {
-    let _refresh = refresh.unwrap_or(false);
+    let do_refresh = refresh.unwrap_or(false);
+    if do_refresh {
+        crate::repo::scanner::sync_all_repo_registries(&state.db)
+            .map_err(|e| AppError::FileSystemError(e))?;
+    }
     let sort = sort.unwrap_or_else(|| "manual".to_string());
 
     let repo = SkillsRepository::new(&state.db);
