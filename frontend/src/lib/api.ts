@@ -241,3 +241,43 @@ export async function getProxyUrl(): Promise<string> {
 export async function setProxyUrl(url: string): Promise<void> {
   await invokeCommand('set_proxy_url', { url })
 }
+
+// ── 关闭行为 ───────────────────────────────────────────
+
+export async function getCloseBehavior(): Promise<string> {
+  return invokeCommand<string>('get_close_behavior')
+}
+
+export async function setCloseBehavior(behavior: string): Promise<void> {
+  await invokeCommand('set_close_behavior', { behavior })
+}
+
+// ── 托盘图标 ───────────────────────────────────────────
+
+export async function getShowTrayIcon(): Promise<boolean> {
+  return invokeCommand<boolean>('get_show_tray_icon')
+}
+
+export async function setShowTrayIcon(enabled: boolean): Promise<void> {
+  await invokeCommand('set_show_tray_icon', { enabled })
+}
+
+// ── 日志级别 ───────────────────────────────────────────
+
+export async function getLogLevel(): Promise<string> {
+  return invokeCommand<string>('get_log_level')
+}
+
+export async function setLogLevel(level: string): Promise<void> {
+  await invokeCommand('set_log_level', { level })
+}
+
+// ── 启动时自动刷新 ─────────────────────────────────────
+
+export async function getAutoRefreshOnStartup(): Promise<boolean> {
+  return invokeCommand<boolean>('get_auto_refresh_on_startup')
+}
+
+export async function setAutoRefreshOnStartup(enabled: boolean): Promise<void> {
+  await invokeCommand('set_auto_refresh_on_startup', { enabled })
+}
