@@ -46,6 +46,34 @@ impl<'a> MaintenanceRepository<'a> {
         })
     }
 
+    pub fn wal_checkpoint(&self) -> AppResult<()> {
+        self.db.with_conn(|conn| {
+            conn.execute_batch("PRAGMA wal_checkpoint(TRUNCATE)")?;
+            Ok(())
+        })
+    }
+
+    pub fn reindex(&self) -> AppResult<()> {
+        self.db.with_conn(|conn| {
+            conn.execute_batch("REINDEX")?;
+            Ok(())
+        })
+    }
+
+    pub fn optimize(&self) -> AppResult<()> {
+        self.db.with_conn(|conn| {
+            conn.execute_batch("PRAGMA optimize")?;
+            Ok(())
+        })
+    }
+
+    pub fn clear_usage(&self) -> AppResult<()> {
+        self.db.with_conn(|conn| {
+            conn.execute_batch("DELETE FROM skill_usage;")?;
+            Ok(())
+        })
+    }
+
     pub fn get_table_count(&self, table: &str) -> AppResult<i64> {
         let allowed_tables = [
             "skills",
@@ -118,6 +146,10 @@ mod tests {
 
         repo.analyze().unwrap();
         repo.vacuum().unwrap();
+        repo.wal_checkpoint().unwrap();
+        repo.reindex().unwrap();
+        repo.optimize().unwrap();
+        repo.clear_usage().unwrap();
 
         let results = repo.integrity_check().unwrap();
         assert_eq!(results, vec!["ok"]);
