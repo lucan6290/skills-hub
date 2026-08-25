@@ -672,3 +672,218 @@
     max-width: calc(100vw - 112px);
   }
 }
+
+/* ── Prompt Files Section (inside tool cards) ── */
+
+.tool-prompts-section {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border-subtle);
+}
+
+.tool-prompts-divider {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+
+.tool-prompts-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--bg-badge);
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-secondary);
+}
+
+.tool-prompt-item {
+  border-radius: 6px;
+  overflow: hidden;
+  transition: background var(--transition-fast, 150ms) ease-out;
+}
+
+.tool-prompt-item.active {
+  background: var(--accent-soft-bg, rgba(59, 130, 246, 0.06));
+  border: 1px solid var(--accent-soft-border, rgba(59, 130, 246, 0.15));
+}
+
+.tool-prompt-item.missing {
+  opacity: 0.6;
+}
+
+.tool-prompt-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  cursor: pointer;
+  gap: 10px;
+  min-height: 40px;
+}
+
+.tool-prompt-row:hover {
+  background: color-mix(in srgb, var(--bg-element) 50%, transparent);
+}
+
+.tool-prompt-item.active .tool-prompt-row:hover {
+  background: transparent;
+}
+
+.tool-prompt-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tool-prompt-icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.tool-prompt-item.active .tool-prompt-icon {
+  color: var(--accent-primary);
+}
+
+.tool-prompt-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tool-prompt-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.tool-prompt-scope {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.4;
+  border: 1px solid transparent;
+}
+
+.tool-prompt-scope.global {
+  background: var(--accent-soft-bg, rgba(59, 130, 246, 0.08));
+  color: var(--accent-primary);
+  border-color: var(--accent-soft-border, rgba(59, 130, 246, 0.15));
+}
+
+.tool-prompt-scope.project {
+  background: var(--success-soft-bg, rgba(34, 197, 94, 0.08));
+  color: var(--status-success, #16a34a);
+  border-color: var(--success-soft-border, rgba(34, 197, 94, 0.15));
+}
+
+.tool-prompt-path {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono, monospace);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-prompt-right {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.tool-prompt-status.exists {
+  color: var(--status-success, #16a34a);
+}
+
+.tool-prompt-status.missing {
+  color: var(--status-error, #dc2626);
+}
+
+/* Inline editor */
+.tool-prompt-editor {
+  padding: 0 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tool-prompt-textarea {
+  width: 100%;
+  min-height: 180px;
+  max-height: 400px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-app, var(--bg-secondary));
+  color: var(--text-primary);
+  font-family: var(--font-mono, 'Cascadia Code', 'Fira Code', monospace);
+  font-size: 12px;
+  line-height: 1.55;
+  resize: vertical;
+  tab-size: 2;
+  outline: none;
+}
+
+.tool-prompt-textarea:focus {
+  border-color: var(--accent-primary);
+}
+
+.tool-prompt-missing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  text-align: center;
+  justify-content: center;
+}
+
+.tool-prompt-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tool-prompt-actions .btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tool-prompt-delete-btn:hover {
+  color: var(--status-error, #dc2626);
+  border-color: var(--status-error, #dc2626);
+}
+
+.tool-prompt-unsaved {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--status-warning, #d97706);
+  margin-left: auto;
+}

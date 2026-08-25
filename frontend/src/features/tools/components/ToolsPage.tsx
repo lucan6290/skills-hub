@@ -1,8 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  AlertCircle,
   ArrowUpDown,
+  CheckCircle,
   ChevronRight,
   ExternalLink,
+  FileText,
   Folder,
   FolderOpen,
   GripVertical,
@@ -11,6 +14,7 @@ import {
   Plus,
   RefreshCw,
   RotateCcw,
+  Save,
   SlidersHorizontal,
   Trash2,
   X,
@@ -18,6 +22,8 @@ import {
 import type { TFunction } from 'i18next'
 import { invokeCommand, reorder as apiReorder } from '@/lib/api'
 import { pickFolder } from '@/lib/pickFolder'
+import { promptService } from '@/services/promptService'
+import type { PromptFileDto } from '@/features/prompts/types'
 import { toast } from 'sonner'
 
 type ToolSkillEntry = {
@@ -77,6 +83,35 @@ const ToolsPage = ({ t }: ToolsPageProps) => {
   const [overIndex, setOverIndex] = useState<number | null>(null)
   const dragIdRef = useRef<string | null>(null)
 
+  // Prompt files state
+  const [promptFiles, setPromptFiles] = useState<PromptFileDto[]>([])
+  const [editingPromptId, setEditingPromptId] = useState<string | null>(null)
+  const [editPromptContent, setEditPromptContent] = useState('')
+  const [originalPromptContent, setOriginalPromptContent] = useState('')
+  const [savingPrompt, setSavingPrompt] = useState(false)
+
+  const loadPromptFiles = useCallback(async () => {
+    try {
+      const files = await promptService.getPromptFiles()
+      setPromptFiles(files)
+    } catch {
+      setPromptFiles([])
+    }
+  }, [])
+
+  const promptFilesByTool = useMemo(() => {
+    const map = new Map<string, PromptFileDto[]>()
+    for (const pf of promptFiles) {
+      const existing = map.get(pf.tool)
+      if (existing) {
+        existing.push(pf)
+      } else {
+        map.set(pf.tool, [pf])
+      }
+    }
+    return map
+  }, [promptFiles])
+
   const loadAdapterConfigs = useCallback(async () => {
     try {
       const data = await invokeCommand<ToolAdapterConfig[]>('get_tool_adapter_configs')
@@ -112,7 +147,8 @@ const ToolsPage = ({ t }: ToolsPageProps) => {
   useEffect(() => {
     void loadTools()
     void loadAdapterConfigs()
-  }, [loadAdapterConfigs, loadTools])
+    void loadPromptFiles()
+  }, [loadAdapterConfigs, loadPromptFiles, loadTools])
 
   const handleToggle = useCallback((key: string) => {
     setExpandedTool((prev) => (prev === key ? null : key))
@@ -249,6 +285,59 @@ const ToolsPage = ({ t }: ToolsPageProps) => {
       return { ...prev, [field]: path }
     })
   }, [t])
+
+  // Prompt file handlers
+  const handleSelectPromptFile = useCallback(async (pf: PromptFileDto) => {
+    if (editingPromptId === pf.id) {
+      setEditingPromptId(null)
+      setEditPromptContent('')
+      setOriginalPromptContent('')
+      return
+    }
+    setEditingPromptId(pf.id)
+    if (!pf.exists_on_disk) {
+      setEditPromptContent('')
+      setOriginalPromptContent('')
+      return
+    }
+    try {
+      const content = await promptService.readPromptFile(pf.file_path)
+      setEditPromptContent(content)
+      setOriginalPromptContent(content)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err))
+      setEditPromptContent('')
+      setOriginalPromptContent('')
+    }
+  }, [editingPromptId])
+
+  const handleSavePromptFile = useCallback(async (pf: PromptFileDto) => {
+    setSavingPrompt(true)
+    try {
+      await promptService.writePromptFile(pf.file_path, editPromptContent)
+      setOriginalPromptContent(editPromptContent)
+      toast.success(t('toolsPage.promptSaved'))
+      await loadPromptFiles()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSavingPrompt(false)
+    }
+  }, [editPromptContent, loadPromptFiles, t])
+
+  const handleDeletePromptFile = useCallback(async (pf: PromptFileDto) => {
+    if (!window.confirm(t('toolsPage.promptDeleteConfirm', { name: pf.file_name }))) return
+    try {
+      await promptService.deletePromptFile(pf.id)
+      setEditingPromptId(null)
+      setEditPromptContent('')
+      setOriginalPromptContent('')
+      toast.success(t('toolsPage.promptDeleted'))
+      await loadPromptFiles()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err))
+    }
+  }, [loadPromptFiles, t])
 
   const adapterConfigByKey = useMemo(
     () => new Map(adapterConfigs.map((config) => [config.tool_key, config])),
@@ -532,6 +621,95 @@ const ToolsPage = ({ t }: ToolsPageProps) => {
                     </div>
                   ))
                 )}
+
+                {/* Prompt files section */}
+                {(() => {
+                  const toolPrompts = promptFilesByTool.get(tool.tool_key) ?? []
+                  if (toolPrompts.length === 0) return null
+                  return (
+                    <div className="tool-prompts-section">
+                      <div className="tool-prompts-divider">
+                        <FileText size={13} />
+                        <span>{t('toolsPage.promptFiles')}</span>
+                        <span className="tool-prompts-count">{toolPrompts.length}</span>
+                      </div>
+                      {toolPrompts.map((pf) => {
+                        const isEditing = editingPromptId === pf.id
+                        const hasChanges = isEditing && editPromptContent !== originalPromptContent
+                        return (
+                          <div key={pf.id} className={`tool-prompt-item${isEditing ? ' active' : ''}${!pf.exists_on_disk ? ' missing' : ''}`}>
+                            <div
+                              className="tool-prompt-row"
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => void handleSelectPromptFile(pf)}
+                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') void handleSelectPromptFile(pf) }}
+                            >
+                              <div className="tool-prompt-left">
+                                <FileText size={13} className="tool-prompt-icon" />
+                                <div className="tool-prompt-info">
+                                  <div className="tool-prompt-name">
+                                    {pf.file_name}
+                                    <span className={`tool-prompt-scope ${pf.scope}`}>
+                                      {pf.scope === 'global' ? t('toolsPage.promptGlobal') : t('toolsPage.promptProject')}
+                                    </span>
+                                  </div>
+                                  <div className="tool-prompt-path">{pf.file_path}</div>
+                                </div>
+                              </div>
+                              <div className="tool-prompt-right">
+                                {pf.exists_on_disk ? (
+                                  <CheckCircle size={12} className="tool-prompt-status exists" />
+                                ) : (
+                                  <AlertCircle size={12} className="tool-prompt-status missing" />
+                                )}
+                              </div>
+                            </div>
+                            {isEditing && (
+                              <div className="tool-prompt-editor">
+                                {!pf.exists_on_disk ? (
+                                  <div className="tool-prompt-missing">
+                                    <AlertCircle size={16} />
+                                    <span>{t('toolsPage.promptFileMissing')}</span>
+                                  </div>
+                                ) : (
+                                  <textarea
+                                    className="tool-prompt-textarea"
+                                    value={editPromptContent}
+                                    onChange={(e) => setEditPromptContent(e.target.value)}
+                                    spellCheck={false}
+                                  />
+                                )}
+                                <div className="tool-prompt-actions">
+                                  <button
+                                    className="btn btn-primary btn-sm"
+                                    type="button"
+                                    disabled={savingPrompt || !hasChanges}
+                                    onClick={() => void handleSavePromptFile(pf)}
+                                  >
+                                    <Save size={12} />
+                                    {savingPrompt ? t('toolsPage.promptSaving') : t('toolsPage.promptSave')}
+                                  </button>
+                                  <button
+                                    className="btn btn-secondary btn-sm tool-prompt-delete-btn"
+                                    type="button"
+                                    onClick={() => void handleDeletePromptFile(pf)}
+                                  >
+                                    <Trash2 size={12} />
+                                    {t('toolsPage.promptDelete')}
+                                  </button>
+                                  {hasChanges && (
+                                    <span className="tool-prompt-unsaved">{t('toolsPage.promptUnsaved')}</span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
               </div>
             )}
           </div>
