@@ -527,13 +527,17 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
     map
 }
 
-pub fn resolve_data_dir() -> PathBuf {
-    // Default data directory: ~/.skillshub
-    // All app data (database, logs, settings) are stored here.
+/// Root directory: ~/.skills-hub
+pub fn resolve_root_dir() -> PathBuf {
     let home = env::var("USERPROFILE")
         .or_else(|_| env::var("HOME"))
         .unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(".skillshub")
+    PathBuf::from(home).join(".skills-hub")
+}
+
+/// Data directory: ~/.skills-hub/data
+pub fn resolve_data_dir() -> PathBuf {
+    resolve_root_dir().join("data")
 }
 
 pub fn default_db_path() -> PathBuf {

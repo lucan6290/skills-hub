@@ -7,7 +7,7 @@ use crate::db::Database;
 pub const DEFAULT_COMMUNITY_REPO_NAME: &str = "community-skills";
 
 /// Resolve the Community Repo path.
-/// Priority: DB setting > ~/.skillshub/community-skills (default).
+/// Priority: DB setting > ~/.skills-hub/skillshub/community-skills (default).
 pub fn resolve_community_repo_path(db: &Database) -> PathBuf {
     use crate::repositories::SettingsRepository;
     let repo = SettingsRepository::new(db);
@@ -22,7 +22,7 @@ pub fn resolve_community_repo_path(db: &Database) -> PathBuf {
 }
 
 /// Resolve the custom skill repo path.
-/// Priority: DB setting > ~/.skillshub/custom-skills (default).
+/// Priority: DB setting > ~/.skills-hub/skillshub/custom-skills (default).
 pub fn resolve_custom_repo_path(db: &Database) -> PathBuf {
     use crate::repositories::SettingsRepository;
     let repo = SettingsRepository::new(db);
@@ -36,29 +36,14 @@ pub fn resolve_custom_repo_path(db: &Database) -> PathBuf {
     base_dir().join("custom-skills")
 }
 
-/// Base data directory: ~/.skillshub
+/// Repo base directory: ~/.skills-hub/skillshub
 fn base_dir() -> PathBuf {
-    home_dir().join(".skillshub")
+    crate::config::resolve_root_dir().join("skillshub")
 }
 
 /// Ensure the community repo directory exists.
 pub fn ensure_community_repo(path: &std::path::Path) -> Result<(), String> {
     std::fs::create_dir_all(path).map_err(|e| format!("failed to create community repo dir: {}", e))
-}
-
-fn home_dir() -> PathBuf {
-    #[cfg(windows)]
-    {
-        PathBuf::from(
-            std::env::var("USERPROFILE")
-                .or_else(|_| std::env::var("HOME"))
-                .unwrap_or_else(|_| "C:\\Users\\Default".to_string()),
-        )
-    }
-    #[cfg(not(windows))]
-    {
-        PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| "/root".to_string()))
-    }
 }
 
 #[cfg(test)]
