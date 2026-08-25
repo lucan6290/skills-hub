@@ -1096,18 +1096,19 @@
 @media (max-width: 920px) {
   .skills-header {
     height: auto;
-    min-height: 64px;
-    padding: 10px 14px;
+    min-height: 56px;
+    padding: 8px 14px;
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
   }
 
   .header-left {
+    flex: 1 1 auto;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-    width: 100%;
+    min-width: 0;
   }
 
   .brand-area {
@@ -1115,7 +1116,7 @@
   }
 
   .nav-tabs {
-    width: min(100%, calc(100vw - 28px));
+    flex: 1 1 100%;
     overflow-x: auto;
   }
 
