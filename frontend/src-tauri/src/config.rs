@@ -528,43 +528,12 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
 }
 
 pub fn resolve_data_dir() -> PathBuf {
-    // Always prefer exe directory: data stays alongside the executable.
-    // Falls back to ~/.skills-hub if the exe directory is not writable
-    // (e.g. installed in C:\Program Files without admin privileges).
-    if let Some(exe_dir) = get_exe_dir() {
-        let data_dir = exe_dir.join("data");
-        if ensure_writable(&data_dir) {
-            return data_dir;
-        }
-        log::warn!(
-            "exe 目录不可写: {}，回退到 ~/.skills-hub",
-            exe_dir.display()
-        );
-    }
-
-    let home = env::var("HOME")
-        .or_else(|_| env::var("USERPROFILE"))
+    // Default data directory: ~/.skillshub
+    // All app data (database, logs, settings) are stored here.
+    let home = env::var("USERPROFILE")
+        .or_else(|_| env::var("HOME"))
         .unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(".skills-hub")
-}
-
-/// Ensure a directory exists and is writable. Returns true on success.
-fn ensure_writable(dir: &std::path::Path) -> bool {
-    if std::fs::create_dir_all(dir).is_err() {
-        return false;
-    }
-    let test_file = dir.join(".write_test");
-    let ok = std::fs::write(&test_file, b"").is_ok();
-    if ok {
-        let _ = std::fs::remove_file(&test_file);
-    }
-    ok
-}
-
-fn get_exe_dir() -> Option<PathBuf> {
-    env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
+    PathBuf::from(home).join(".skillshub")
 }
 
 pub fn default_db_path() -> PathBuf {

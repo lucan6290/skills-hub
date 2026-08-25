@@ -6,20 +6,20 @@
 
 ## 职责
 
-解析社区仓库（`~/.skillshub`）和自定义仓库（`~/.skills-hub-custom`）的路径，扫描仓库中的技能目录，将发现的技能注册到数据库，并移除已不存在的技能记录。
+解析社区仓库（`~/.skillshub/skills`）和自定义仓库（`~/.skillshub/custom-skills`）的路径，扫描仓库中的技能目录，将发现的技能注册到数据库，并移除已不存在的技能记录。
 
 ## 文件清单
 
 | 文件 | 职责 |
 |------|------|
-| `community.rs` | 路径解析：`resolve_community_repo_path`（DB 优先 → `~/.skillshub`）、`resolve_custom_repo_path`（DB 优先 → `~/.skills-hub-custom`）、`ensure_community_repo`（创建目录） |
+| `community.rs` | 路径解析：`resolve_community_repo_path`（DB 优先 → `~/.skillshub/skills`）、`resolve_custom_repo_path`（DB 优先 → `~/.skillshub/custom-skills`）、`ensure_community_repo`（创建目录） |
 | `scanner.rs` | 扫描注册：`is_skill_dir`（检测 `SKILL.md` 或 `.claude/skills/*/SKILL.md`）、`is_suite_dir`（套件检测）、`has_sub_skills`、`scan_and_register_community_repo`、`scan_and_register_custom_repo`、`sync_all_repo_registries`、`sync_community_repo_registry` / `sync_custom_repo_registry`、`normalize_source_type` |
 
 ## 路径解析优先级
 
 ```
-community_repo_path:  DB setting → ~/.skillshub
-custom_repo_path:     DB setting → ~/.skills-hub-custom
+community_repo_path:  DB setting → ~/.skillshub/skills
+custom_repo_path:     DB setting → ~/.skillshub/custom-skills
 ```
 
 ## 技能目录检测规则

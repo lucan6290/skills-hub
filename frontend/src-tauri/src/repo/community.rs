@@ -4,10 +4,10 @@ use std::path::PathBuf;
 
 use crate::db::Database;
 
-pub const DEFAULT_COMMUNITY_REPO_NAME: &str = ".skillshub";
+pub const DEFAULT_COMMUNITY_REPO_NAME: &str = "skills";
 
 /// Resolve the Community Repo path.
-/// Priority: DB setting > ~/.skillshub (exists) > ~/.skillshub (default).
+/// Priority: DB setting > ~/.skillshub/skills (default).
 pub fn resolve_community_repo_path(db: &Database) -> PathBuf {
     use crate::repositories::SettingsRepository;
     let repo = SettingsRepository::new(db);
@@ -18,12 +18,11 @@ pub fn resolve_community_repo_path(db: &Database) -> PathBuf {
         }
     }
 
-    let home = home_dir();
-    home.join(DEFAULT_COMMUNITY_REPO_NAME)
+    base_dir().join(DEFAULT_COMMUNITY_REPO_NAME)
 }
 
 /// Resolve the custom skill repo path.
-/// Priority: DB setting > ~/.skills-hub-custom.
+/// Priority: DB setting > ~/.skillshub/custom-skills (default).
 pub fn resolve_custom_repo_path(db: &Database) -> PathBuf {
     use crate::repositories::SettingsRepository;
     let repo = SettingsRepository::new(db);
@@ -34,7 +33,12 @@ pub fn resolve_custom_repo_path(db: &Database) -> PathBuf {
         }
     }
 
-    home_dir().join(".skills-hub-custom")
+    base_dir().join("custom-skills")
+}
+
+/// Base data directory: ~/.skillshub
+fn base_dir() -> PathBuf {
+    home_dir().join(".skillshub")
 }
 
 /// Ensure the community repo directory exists.
@@ -72,7 +76,7 @@ mod tests {
     fn test_resolve_custom_repo_default() {
         let db = Database::new_in_memory().unwrap();
         let path = resolve_custom_repo_path(&db);
-        assert!(path.to_string_lossy().contains(".skills-hub-custom"));
+        assert!(path.to_string_lossy().contains("custom-skills"));
     }
 
     #[test]
