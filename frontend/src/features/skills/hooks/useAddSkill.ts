@@ -144,7 +144,7 @@ export function useAddSkill(deps: UseAddSkillDeps) {
         setError(t('tagsApplyFailed', { name: skillName }))
       }
     },
-    [addModalTagIds, invokeCommand, setError, t],
+    [addModalTagIds, setError, t],
   )
 
   const handleCreateLocal = useCallback(async () => {

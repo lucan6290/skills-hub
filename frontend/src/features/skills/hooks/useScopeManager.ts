@@ -312,7 +312,7 @@ export function useScopeManager(deps: UseScopeManagerDeps) {
         try {
           setActionMessage(t('suiteSync.unsyncingSuite', { name: skill.name, tool: toolLabel }))
           await invoke('unsync_suite_from_tool', {
-            suite_skill_id: skill.id,
+            skill_id: skill.id,
             tool: toolId,
             scope: skillScope,
             project_path: skillScope === 'project' ? projects[0] : undefined,
