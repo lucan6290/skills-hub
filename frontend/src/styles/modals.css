@@ -119,10 +119,10 @@
 
 .scope-inline-warning {
   padding: 10px 12px;
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  border: 1px solid color-mix(in srgb, var(--status-warning) 35%, transparent);
   border-radius: 8px;
-  background: rgba(245, 158, 11, 0.08);
-  color: #92400e;
+  background: var(--warning-soft-bg);
+  color: var(--status-warning);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -198,8 +198,8 @@
 }
 
 .delete-warning {
-  border: 1px solid rgba(220, 38, 38, 0.15);
-  background: rgba(220, 38, 38, 0.05);
+  border: 1px solid color-mix(in srgb, var(--status-error) 15%, transparent);
+  background: var(--danger-soft-bg);
   border-radius: var(--radius-md);
   padding: 12px 14px;
 }
@@ -324,7 +324,7 @@
   background: linear-gradient(
     90deg,
     var(--accent-primary) 0%,
-    #60a5fa 50%,
+    var(--accent-project) 50%,
     var(--accent-primary) 100%
   );
   background-size: 200% 100%;
@@ -457,7 +457,7 @@
   border-radius: var(--radius-lg);
   padding: 18px 20px;
   box-shadow: var(--shadow-sm);
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -845,7 +845,7 @@
 }
 
 .pick-item-reason {
-  color: var(--danger);
+  color: var(--status-error);
   font-size: 12px;
 }
 

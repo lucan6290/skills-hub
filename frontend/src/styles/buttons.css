@@ -10,7 +10,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
 }
 
 .card-btn:hover {
@@ -56,7 +56,7 @@
   align-items: center;
   gap: 6px;
   border: 1px solid transparent;
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
   position: relative;
   overflow: hidden;
   background: transparent;
@@ -65,13 +65,13 @@
 .btn-primary {
   background: var(--accent-primary);
   color: var(--accent-primary-fg);
-  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 4px 6px -1px var(--accent-primary-shadow);
 }
 
 .btn-primary:hover {
   background: var(--accent-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 8px -1px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 6px 8px -1px var(--accent-primary-shadow-strong);
 }
 
 .btn-secondary {
@@ -124,7 +124,7 @@
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
   border: 1px solid var(--border-subtle);
   background: var(--bg-app);
 }
@@ -179,7 +179,7 @@
 .btn-danger-solid {
   background: var(--status-error);
   color: var(--accent-primary-fg);
-  box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.2);
+  box-shadow: 0 4px 6px -1px color-mix(in srgb, var(--status-error) 20%, transparent);
 }
 
 .btn-danger-solid:hover {
@@ -218,11 +218,11 @@
   background: var(--bg-panel);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition-fast) var(--ease-out);
 }
 
 .btn-icon:hover {
-  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+  background: var(--bg-hover);
   color: var(--text-primary);
   border-color: var(--border-hover);
 }
@@ -233,8 +233,8 @@
 }
 
 .sync-btn:hover {
-  color: var(--accent-primary, #6366f1);
-  border-color: var(--accent-primary, #6366f1);
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
 }
 
 .lang-btn,

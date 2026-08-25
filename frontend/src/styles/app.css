@@ -88,7 +88,7 @@
   border: none;
   background: none;
   position: relative;
-  transition: color 0.2s;
+  transition: color var(--transition-base) var(--ease-out);
   font-family: inherit;
 }
 
@@ -128,10 +128,7 @@
   font-weight: 700;
   font-size: 20px;
   letter-spacing: -0.03em;
-  background: linear-gradient(to right, #2563eb, #9333ea, #ea580c);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text-primary);
 }
 
 .brand-subtitle {
@@ -220,7 +217,7 @@
   width: 100%;
   min-width: 140px;
   font-size: 13px;
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
   font-family: var(--font-ui);
 }
 
@@ -228,7 +225,7 @@
   outline: none;
   border-color: var(--accent-primary);
   background: var(--bg-app);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-soft-bg) 88%, transparent);
 }
 
 .search-icon-abs {
@@ -290,7 +287,7 @@
 .banner-icon {
   width: 32px;
   height: 32px;
-  background: rgba(245, 158, 11, 0.1);
+  background: var(--warning-soft-bg);
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
@@ -395,13 +392,13 @@
   color: var(--text-primary);
   font-family: var(--font-mono);
   font-size: 13px;
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
 }
 
 .input:focus {
   border-color: var(--accent-primary);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-soft-bg) 88%, transparent);
 }
 
 .input-row {
@@ -489,13 +486,13 @@
   font-family: var(--font-ui);
   appearance: none;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
 }
 
 .settings-select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-soft-bg) 88%, transparent);
 }
 
 .settings-select-caret {
@@ -524,7 +521,7 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
 }
 
 .settings-theme-btn:hover {
@@ -565,7 +562,7 @@
 .settings-input:focus {
   outline: none;
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-soft-bg) 88%, transparent);
 }
 
 .settings-browse {
@@ -630,7 +627,7 @@
   border: 1px solid var(--border-subtle);
   position: relative;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
   padding: 0;
 }
 
@@ -652,7 +649,7 @@
   position: absolute;
   top: 2px;
   left: 2px;
-  transition: transform 0.2s ease;
+  transition: transform var(--transition-base) var(--ease-out);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
@@ -693,7 +690,7 @@
 }
 
 .settings-update-ok {
-  color: var(--success, #22c55e);
+  color: var(--status-success);
   font-size: 13px;
 }
 
@@ -716,7 +713,7 @@
   gap: 8px;
   margin-top: 8px;
   font-size: 13px;
-  color: var(--danger, #ef4444);
+  color: var(--status-error);
 }
 
 /* Update modal */
@@ -837,12 +834,12 @@
   padding: 0 28px;
   border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 82%, transparent);
   background: var(--bg-header);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.48) inset;
+  box-shadow: 0 1px 0 var(--highlight-inset) inset;
   backdrop-filter: blur(18px) saturate(1.18);
 }
 
 :root[data-theme='dark'] .skills-header {
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  box-shadow: 0 1px 0 var(--highlight-inset) inset;
 }
 
 .header-left {
@@ -1003,6 +1000,7 @@
   min-height: 0;
   width: min(1280px, 100%);
   margin: 0 auto;
+  animation: view-enter var(--transition-slow) var(--ease-out);
 }
 
 .filter-bar {
@@ -1068,7 +1066,7 @@
 .search-input {
   height: 36px;
   background: var(--bg-panel);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1px 0 var(--highlight-inset);
 }
 
 .search-input:focus {
@@ -1210,6 +1208,7 @@
 .settings-page,
 .detail-view {
   background: transparent;
+  animation: view-enter var(--transition-slow) var(--ease-out);
 }
 
 .explore-page,
@@ -1488,11 +1487,11 @@
 }
 
 .brand-word-accent {
-  color: #b8613c;
+  color: var(--brand-accent);
 }
 
 :root[data-theme='dark'] .brand-word-accent {
-  color: #e4a145;
+  color: var(--brand-accent);
 }
 
 @media (max-width: 520px) {

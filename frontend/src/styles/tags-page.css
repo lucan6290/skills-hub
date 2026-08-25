@@ -10,7 +10,7 @@
 }
 
 .tag-filter-btn.active {
-  border-color: rgba(37, 99, 235, 0.45);
+  border-color: color-mix(in srgb, var(--accent-project) 45%, transparent);
   color: var(--accent-primary);
   background: var(--accent-soft-bg);
 }
@@ -489,9 +489,9 @@
   width: 34px;
   height: 34px;
   border-radius: 9px;
-  color: #b8613c;
-  border-color: color-mix(in srgb, #b8613c 28%, var(--border-subtle));
-  background: color-mix(in srgb, #b8613c 10%, var(--bg-panel));
+  color: var(--brand-accent);
+  border-color: color-mix(in srgb, var(--brand-accent) 28%, var(--border-subtle));
+  background: color-mix(in srgb, var(--brand-accent) 10%, var(--bg-panel));
 }
 
 .tags-toolbar {
@@ -552,7 +552,7 @@
   cursor: grab;
   color: var(--text-muted);
   opacity: 0.4;
-  transition: opacity 0.15s;
+  transition: opacity var(--transition-fast) var(--ease-out);
 }
 
 .tags-drag-handle:hover {
@@ -637,9 +637,9 @@
 }
 
 :root[data-theme='dark'] .tags-review-icon {
-  color: #e4a145;
-  border-color: color-mix(in srgb, #e4a145 28%, var(--border-subtle));
-  background: color-mix(in srgb, #e4a145 10%, var(--bg-panel));
+  color: var(--brand-accent);
+  border-color: color-mix(in srgb, var(--brand-accent) 28%, var(--border-subtle));
+  background: color-mix(in srgb, var(--brand-accent) 10%, var(--bg-panel));
 }
 
 @media (max-width: 920px) {

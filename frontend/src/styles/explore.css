@@ -21,7 +21,7 @@
   padding: 10px 12px;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background var(--transition-fast) var(--ease-out);
 }
 
 .explore-skill-item:hover {
@@ -131,7 +131,7 @@
   padding: 0 16px 0 40px;
   font-size: 14px;
   color: var(--text-primary);
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
   font-family: inherit;
 }
 
@@ -178,7 +178,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
   cursor: pointer;
   background: var(--bg-app);
 }
@@ -247,7 +247,7 @@
   display: flex;
   align-items: center;
   color: var(--text-tertiary);
-  transition: color 0.15s;
+  transition: color var(--transition-fast) var(--ease-out);
 }
 
 .explore-card-link:hover {
@@ -256,7 +256,7 @@
 
 .explore-btn-install {
   background: var(--accent-primary);
-  color: white;
+  color: var(--accent-primary-fg);
   height: 30px;
   padding: 0 14px;
   font-size: 12px;
@@ -264,7 +264,7 @@
   border-radius: var(--radius-md, 8px);
   border: none;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
   font-family: inherit;
   flex-shrink: 0;
 }
@@ -279,14 +279,14 @@
 }
 
 .explore-btn-installed {
-  background: var(--status-success-bg, #ecfdf5);
+  background: var(--success-soft-bg);
   color: var(--status-success);
   height: 30px;
   padding: 0 14px;
   font-size: 12px;
   font-weight: 600;
   border-radius: var(--radius-md, 8px);
-  border: 1px solid var(--status-success-border, #a7f3d0);
+  border: 1px solid var(--success-soft-border);
   cursor: default;
   font-family: inherit;
   display: flex;
@@ -311,7 +311,7 @@
   height: 38px;
   border-color: var(--border-subtle);
   background: var(--bg-panel);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1px 0 var(--highlight-inset);
 }
 
 .explore-search-input:focus {
@@ -356,7 +356,7 @@
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--accent-soft-bg) 26%, transparent), transparent 52%),
     color-mix(in srgb, var(--bg-panel) 88%, transparent);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.42) inset;
+  box-shadow: 0 1px 0 var(--highlight-inset) inset;
 }
 
 .explore-card::before {

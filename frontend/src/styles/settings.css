@@ -34,7 +34,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition-fast) var(--ease-out);
   flex-shrink: 0;
 }
 
@@ -74,7 +74,7 @@
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-base) var(--ease-out);
   white-space: nowrap;
   font-family: var(--font-ui);
   position: relative;
@@ -86,7 +86,7 @@
 
 .settings-v2-tab.active {
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--accent-primary-fg);
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
@@ -167,7 +167,7 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition-fast) var(--ease-out);
   font-family: var(--font-ui);
   white-space: nowrap;
   min-height: 36px;
@@ -184,12 +184,12 @@
 
 .settings-v2-seg-btn.active {
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--accent-primary-fg);
   font-weight: 600;
 }
 
 .settings-v2-seg-btn.active svg {
-  color: #fff;
+  color: var(--accent-primary-fg);
 }
 
 .settings-v2-seg-btn:disabled {
@@ -199,13 +199,13 @@
 
 .settings-v2-seg-btn--primary {
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--accent-primary-fg);
   font-weight: 600;
 }
 
 .settings-v2-seg-btn--primary:hover {
   background: var(--accent-primary-hover);
-  color: #fff;
+  color: var(--accent-primary-fg);
 }
 
 /* Outline pill button (used by both <button> and <a>) */
@@ -225,7 +225,7 @@
   font-family: var(--font-ui);
   text-decoration: none;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all var(--transition-fast) var(--ease-out);
   white-space: nowrap;
   min-height: 36px;
   line-height: 1;
@@ -298,7 +298,7 @@
   flex-shrink: 0;
   font-family: var(--font-ui);
   font-size: 13px;
-  transition: all 0.15s;
+  transition: all var(--transition-fast) var(--ease-out);
 }
 
 .settings-v2-path-btn:hover {
@@ -517,7 +517,7 @@
 }
 
 .settings-v2-advanced-toggle svg {
-  transition: transform 0.15s;
+  transition: transform var(--transition-fast) var(--ease-out);
 }
 
 .settings-v2-advanced-toggle svg.open {
@@ -560,7 +560,7 @@
   font-size: 13px;
   font-family: var(--font-mono);
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color var(--transition-fast) var(--ease-out);
 }
 
 .settings-v2-proxy-input:focus {

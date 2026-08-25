@@ -35,7 +35,7 @@
   border: none;
   padding: 4px 8px;
   border-radius: var(--radius-sm);
-  transition: all 0.2s;
+  transition: all var(--transition-base) var(--ease-out);
   font-family: inherit;
   flex-shrink: 0;
 }
@@ -121,7 +121,7 @@
   width: 100%;
   text-align: left;
   font-family: inherit;
-  transition: background 0.12s;
+  transition: background var(--transition-fast) var(--ease-out);
   min-height: 28px;
 }
 
