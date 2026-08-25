@@ -193,6 +193,10 @@ export async function openDbFolder(): Promise<{ ok: boolean; message: string }> 
   return invokeCommand('db_open_folder')
 }
 
+export async function importDb(): Promise<{ ok: boolean; message: string }> {
+  return invokeCommand('db_import')
+}
+
 // ── 更新检查 ───────────────────────────────────────────
 
 export interface CheckUpdateResult {
