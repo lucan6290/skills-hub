@@ -247,9 +247,10 @@ const UpdatePanel = ({ t }: UpdatePanelProps) => {
       )}
 
       {/* 外部链接 — GitHub */}
-      {result?.release_url && (() => {
-        const repoMatch = result.release_url.match(/https:\/\/github\.com\/[^/]+\/[^/]+/)
-        const repoUrl = repoMatch ? repoMatch[0] : result.release_url
+      {(() => {
+        const repoUrl = result?.release_url
+          ? (result.release_url.match(/https:\/\/github\.com\/[^/]+\/[^/]+/)?.[0] ?? result.release_url)
+          : 'https://github.com/lucan6290/skills-hub'
         return (
           <div className="settings-v2-item">
             <div className="settings-v2-item-info">
@@ -274,26 +275,24 @@ const UpdatePanel = ({ t }: UpdatePanelProps) => {
       })()}
 
       {/* 外部链接 — 更新日志 */}
-      {result?.release_url && (
-        <div className="settings-v2-item">
-          <div className="settings-v2-item-info">
-            <div className="settings-v2-item-title">
-              <FileText size={16} color="var(--text-tertiary)" />
-              {t('update.changelog')}
-            </div>
+      <div className="settings-v2-item">
+        <div className="settings-v2-item-info">
+          <div className="settings-v2-item-title">
+            <FileText size={16} color="var(--text-tertiary)" />
+            {t('update.changelog')}
           </div>
-          <a
-            href={result.release_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="settings-v2-pill-btn"
-            style={{ textDecoration: 'none' }}
-          >
-            <ExternalLink size={16} />
-            <span>{t('update.changelog')}</span>
-          </a>
         </div>
-      )}
+        <a
+          href={result?.release_url ?? 'https://github.com/lucan6290/skills-hub/releases'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="settings-v2-pill-btn"
+          style={{ textDecoration: 'none' }}
+        >
+          <ExternalLink size={16} />
+          <span>{t('update.changelog')}</span>
+        </a>
+      </div>
     </div>
   )
 }
