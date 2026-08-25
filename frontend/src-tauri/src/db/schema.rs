@@ -6,6 +6,57 @@ pub fn ensure_schema(conn: &Connection) -> SqlResult<()> {
     self_heal_schema(conn)?;
     initialize_sort_order_columns(conn)?;
     initialize_sort_order_data(conn)?;
+    migrate_community_paths(conn)?;
+    Ok(())
+}
+
+/// Migrate old community_path prefixes to the new directory structure.
+/// Old: ~/.skillshub/{name} → New: ~/.skills-hub/skillshub/community-skills/{name}
+fn migrate_community_paths(conn: &Connection) -> SqlResult<()> {
+    let home = std::env::var("USERPROFILE")
+        .or_else(|_| std::env::var("HOME"))
+        .unwrap_or_default();
+    if home.is_empty() {
+        return Ok(());
+    }
+
+    let old_prefix = format!("{}\\.skillshub\\", home.replace('/', "\\"));
+    let old_prefix_unix = format!("{}/.skillshub/", home.replace('\\', "/"));
+    let new_prefix = format!("{}\\.skills-hub\\skillshub\\community-skills\\", home.replace('/', "\\"));
+    let new_prefix_unix = format!("{}/.skills-hub/skillshub/community-skills/", home.replace('\\', "/"));
+
+    // Only migrate if there are records with the old prefix
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM skills WHERE community_path LIKE ?1 OR community_path LIKE ?2",
+        rusqlite::params![format!("{}%", old_prefix), format!("{}%", old_prefix_unix)],
+        |row| row.get(0),
+    )?;
+
+    if count == 0 {
+        return Ok(());
+    }
+
+    log::info!("migrating {} skill community_path(s) from old prefix", count);
+
+    conn.execute(
+        "UPDATE skills SET community_path = ?1 || SUBSTR(community_path, LENGTH(?2) + 1) WHERE community_path LIKE ?2 || '%'",
+        rusqlite::params![new_prefix, old_prefix],
+    )?;
+    conn.execute(
+        "UPDATE skills SET community_path = ?1 || SUBSTR(community_path, LENGTH(?2) + 1) WHERE community_path LIKE ?2 || '%'",
+        rusqlite::params![new_prefix_unix, old_prefix_unix],
+    )?;
+
+    // Also migrate source_ref if it matches
+    conn.execute(
+        "UPDATE skills SET source_ref = ?1 || SUBSTR(source_ref, LENGTH(?2) + 1) WHERE source_ref LIKE ?2 || '%' AND source_ref IS NOT NULL",
+        rusqlite::params![new_prefix, old_prefix],
+    )?;
+    conn.execute(
+        "UPDATE skills SET source_ref = ?1 || SUBSTR(source_ref, LENGTH(?2) + 1) WHERE source_ref LIKE ?2 || '%' AND source_ref IS NOT NULL",
+        rusqlite::params![new_prefix_unix, old_prefix_unix],
+    )?;
+
     Ok(())
 }
 
