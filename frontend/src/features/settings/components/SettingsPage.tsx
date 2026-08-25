@@ -18,6 +18,10 @@ import {
   Bell,
   FileText,
   RefreshCw,
+  Palette,
+  HardDrive,
+  Shield,
+  Settings2,
 } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import { toast } from 'sonner'
@@ -278,10 +282,23 @@ const SettingsPage = ({
       <div className="settings-v2-content">
         {activeTab === 'general' && (
           <div className="settings-v2-sections">
+            {/* ── Group: Appearance ── */}
+            <div className="settings-v2-group-label">
+              <Palette size={13} />
+              {t('settings.groupAppearance')}
+            </div>
+
             {/* Language Section */}
             <section className="settings-v2-card">
-              <h3 className="settings-v2-section-title">{t('settings.interfaceLanguage')}</h3>
-              <p className="settings-v2-section-desc">{t('settings.languageDesc')}</p>
+              <div className="settings-v2-card-header">
+                <div className="settings-v2-card-icon settings-v2-card-icon--teal">
+                  <Globe size={18} />
+                </div>
+                <div className="settings-v2-card-text">
+                  <h3 className="settings-v2-section-title">{t('settings.interfaceLanguage')}</h3>
+                  <p className="settings-v2-section-desc">{t('settings.languageDesc')}</p>
+                </div>
+              </div>
               <div className="settings-v2-seg-group">
                 {LANG_OPTIONS.map((opt) => (
                   <button
@@ -300,8 +317,15 @@ const SettingsPage = ({
 
             {/* Theme Section */}
             <section className="settings-v2-card">
-              <h3 className="settings-v2-section-title">{t('settings.appearanceTheme')}</h3>
-              <p className="settings-v2-section-desc">{t('settings.themeDesc')}</p>
+              <div className="settings-v2-card-header">
+                <div className="settings-v2-card-icon settings-v2-card-icon--amber">
+                  <Sun size={18} />
+                </div>
+                <div className="settings-v2-card-text">
+                  <h3 className="settings-v2-section-title">{t('settings.appearanceTheme')}</h3>
+                  <p className="settings-v2-section-desc">{t('settings.themeDesc')}</p>
+                </div>
+              </div>
               <div className="settings-v2-seg-group">
                 {THEME_OPTIONS.map(({ key, labelKey, Icon }) => (
                   <button
@@ -318,10 +342,23 @@ const SettingsPage = ({
               </div>
             </section>
 
+            {/* ── Group: Data & Storage ── */}
+            <div className="settings-v2-group-label">
+              <HardDrive size={13} />
+              {t('settings.groupDataStorage')}
+            </div>
+
             {/* Storage Section */}
             <section className="settings-v2-card">
-              <h3 className="settings-v2-section-title">{t('settings.skillsStorage')}</h3>
-              <p className="settings-v2-section-desc">{t('settings.storageDesc')}</p>
+              <div className="settings-v2-card-header">
+                <div className="settings-v2-card-icon settings-v2-card-icon--blue">
+                  <Folder size={18} />
+                </div>
+                <div className="settings-v2-card-text">
+                  <h3 className="settings-v2-section-title">{t('settings.skillsStorage')}</h3>
+                  <p className="settings-v2-section-desc">{t('settings.storageDesc')}</p>
+                </div>
+              </div>
 
               <PathField
                 label={t('settings.storageLocation')}
@@ -370,13 +407,23 @@ const SettingsPage = ({
               </div>
             </section>
 
+            {/* ── Group: Network ── */}
+            <div className="settings-v2-group-label">
+              <Shield size={13} />
+              {t('settings.groupNetwork')}
+            </div>
+
             {/* Network Proxy Section */}
             <section className="settings-v2-card">
-              <h3 className="settings-v2-section-title">
-                <Globe size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
-                {t('settings.proxyTitle')}
-              </h3>
-              <p className="settings-v2-section-desc">{t('settings.proxyDesc')}</p>
+              <div className="settings-v2-card-header">
+                <div className="settings-v2-card-icon settings-v2-card-icon--green">
+                  <Globe size={18} />
+                </div>
+                <div className="settings-v2-card-text">
+                  <h3 className="settings-v2-section-title">{t('settings.proxyTitle')}</h3>
+                  <p className="settings-v2-section-desc">{t('settings.proxyDesc')}</p>
+                </div>
+              </div>
               <div className="settings-v2-proxy-row">
                 <input
                   type="text"
@@ -397,16 +444,26 @@ const SettingsPage = ({
               <p className="settings-v2-card-note">{t('settings.proxyHint')}</p>
             </section>
 
-            {/* Autostart Section */}
+            {/* ── Group: System ── */}
+            <div className="settings-v2-group-label">
+              <Settings2 size={13} />
+              {t('settings.groupSystem')}
+            </div>
+
+            {/* Autostart + Close Behavior + Tray + Log + AutoRefresh — combined system card */}
             <section className="settings-v2-card">
-              <h3 className="settings-v2-section-title">
-                <Power size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
-                {t('settings.autostartTitle')}
-              </h3>
-              <p className="settings-v2-section-desc">{t('settings.autostartDesc')}</p>
+              <div className="settings-v2-card-header">
+                <div className="settings-v2-card-icon settings-v2-card-icon--slate">
+                  <Power size={18} />
+                </div>
+                <div className="settings-v2-card-text">
+                  <h3 className="settings-v2-section-title">{t('settings.autostartTitle')}</h3>
+                  <p className="settings-v2-section-desc">{t('settings.autostartDesc')}</p>
+                </div>
+              </div>
               <div className="settings-v2-item">
                 <div className="settings-v2-item-info">
-                  <div className="settings-v2-item-title">{t('settings.autostartTitle')}</div>
+                  <div className="settings-v2-item-title">{t('settings.autostartToggle')}</div>
                 </div>
                 <button
                   type="button"
@@ -421,13 +478,16 @@ const SettingsPage = ({
               </div>
             </section>
 
-            {/* Close Behavior Section */}
             <section className="settings-v2-card">
-              <h3 className="settings-v2-section-title">
-                <XCircle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
-                {t('settings.closeBehaviorTitle')}
-              </h3>
-              <p className="settings-v2-section-desc">{t('settings.closeBehaviorDesc')}</p>
+              <div className="settings-v2-card-header">
+                <div className="settings-v2-card-icon settings-v2-card-icon--rose">
+                  <XCircle size={18} />
+                </div>
+                <div className="settings-v2-card-text">
+                  <h3 className="settings-v2-section-title">{t('settings.closeBehaviorTitle')}</h3>
+                  <p className="settings-v2-section-desc">{t('settings.closeBehaviorDesc')}</p>
+                </div>
+              </div>
               <div className="settings-v2-seg-group">
                 {CLOSE_BEHAVIOR_OPTIONS.map(({ key, labelKey, Icon }) => (
                   <button
@@ -444,13 +504,16 @@ const SettingsPage = ({
               </div>
             </section>
 
-            {/* System Tray Section */}
             <section className="settings-v2-card">
-              <h3 className="settings-v2-section-title">
-                <Bell size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
-                {t('settings.trayIconTitle')}
-              </h3>
-              <p className="settings-v2-section-desc">{t('settings.trayIconDesc')}</p>
+              <div className="settings-v2-card-header">
+                <div className="settings-v2-card-icon settings-v2-card-icon--amber">
+                  <Bell size={18} />
+                </div>
+                <div className="settings-v2-card-text">
+                  <h3 className="settings-v2-section-title">{t('settings.trayIconTitle')}</h3>
+                  <p className="settings-v2-section-desc">{t('settings.trayIconDesc')}</p>
+                </div>
+              </div>
               <div className="settings-v2-item">
                 <div className="settings-v2-item-info">
                   <div className="settings-v2-item-title">{t('settings.showTrayIcon')}</div>
@@ -467,13 +530,16 @@ const SettingsPage = ({
               </div>
             </section>
 
-            {/* Log Level Section */}
             <section className="settings-v2-card">
-              <h3 className="settings-v2-section-title">
-                <FileText size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
-                {t('settings.logLevelTitle')}
-              </h3>
-              <p className="settings-v2-section-desc">{t('settings.logLevelDesc')}</p>
+              <div className="settings-v2-card-header">
+                <div className="settings-v2-card-icon settings-v2-card-icon--slate">
+                  <FileText size={18} />
+                </div>
+                <div className="settings-v2-card-text">
+                  <h3 className="settings-v2-section-title">{t('settings.logLevelTitle')}</h3>
+                  <p className="settings-v2-section-desc">{t('settings.logLevelDesc')}</p>
+                </div>
+              </div>
               <div className="settings-v2-seg-group">
                 {LOG_LEVEL_OPTIONS.map(({ key, labelKey }) => (
                   <button
@@ -489,13 +555,16 @@ const SettingsPage = ({
               </div>
             </section>
 
-            {/* Auto Refresh on Startup Section */}
             <section className="settings-v2-card">
-              <h3 className="settings-v2-section-title">
-                <RefreshCw size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
-                {t('settings.autoRefreshTitle')}
-              </h3>
-              <p className="settings-v2-section-desc">{t('settings.autoRefreshDesc')}</p>
+              <div className="settings-v2-card-header">
+                <div className="settings-v2-card-icon settings-v2-card-icon--teal">
+                  <RefreshCw size={18} />
+                </div>
+                <div className="settings-v2-card-text">
+                  <h3 className="settings-v2-section-title">{t('settings.autoRefreshTitle')}</h3>
+                  <p className="settings-v2-section-desc">{t('settings.autoRefreshDesc')}</p>
+                </div>
+              </div>
               <div className="settings-v2-item">
                 <div className="settings-v2-item-info">
                   <div className="settings-v2-item-title">{t('settings.autoRefreshToggle')}</div>
