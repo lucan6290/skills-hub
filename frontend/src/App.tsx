@@ -25,6 +25,7 @@ const SkillDetailView = lazy(() => import('@/features/skills/components/SkillDet
 const TagsPage = lazy(() => import('@/features/tags/components/TagsPage'))
 const SettingsPage = lazy(() => import('@/features/settings/components/SettingsPage'))
 const ToolsPage = lazy(() => import('@/features/tools/components/ToolsPage'))
+const PromptsPage = lazy(() => import('@/features/prompts/components/PromptsPage'))
 
 // ─── Lazy-loaded modals ─────────────────────────────
 const SkillInfoModal = lazy(() => import('@/features/skills/modals/SkillInfoModal'))
@@ -439,6 +440,8 @@ function AppContent() {
           />
         ) : modal.activeView === 'tools' ? (
           <ToolsPage t={t} />
+        ) : modal.activeView === 'prompts' ? (
+          <PromptsPage t={t} />
         ) : null}
         </Suspense>
       </main>

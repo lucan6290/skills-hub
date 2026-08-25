@@ -1,3 +1,4 @@
+pub mod prompt_file;
 pub mod recent_project;
 pub mod scope_preference;
 pub mod setting;
@@ -8,6 +9,7 @@ pub mod tag;
 pub mod tool_adapter_config;
 pub mod tool_cache;
 
+pub use prompt_file::PromptFile;
 pub use recent_project::RecentProject;
 pub use scope_preference::ScopePreference;
 pub use setting::Setting;

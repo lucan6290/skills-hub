@@ -1,4 +1,5 @@
 pub mod maintenance;
+pub mod prompt_files;
 pub mod recent_projects;
 pub mod scope_preferences;
 pub mod settings;
@@ -10,6 +11,7 @@ pub mod tool_adapter_configs;
 pub mod tool_cache;
 
 pub use maintenance::MaintenanceRepository;
+pub use prompt_files::PromptFilesRepository;
 pub use recent_projects::RecentProjectsRepository;
 pub use scope_preferences::ScopePreferencesRepository;
 pub use settings::SettingsRepository;

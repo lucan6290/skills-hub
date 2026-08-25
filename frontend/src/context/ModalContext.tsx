@@ -16,7 +16,7 @@ type ModalState = {
   // Delete tag confirmation
   pendingDeleteTag: TagWithCountDto | null
   // Active view
-  activeView: 'myskills' | 'detail' | 'settings' | 'tags' | 'tools'
+  activeView: 'myskills' | 'detail' | 'settings' | 'tags' | 'tools' | 'prompts'
   activeSkillSource: 'custom' | 'community'
   detailSkill: ManagedSkill | null
 }
@@ -30,7 +30,7 @@ type ModalActions = {
   openEditTags: (skill: ManagedSkill) => void
   closeEditTags: () => void
   setPendingDeleteTag: (tag: TagWithCountDto | null) => void
-  handleViewChange: (view: 'myskills' | 'tags' | 'tools') => void
+  handleViewChange: (view: 'myskills' | 'tags' | 'tools' | 'prompts') => void
   setActiveSkillSource: (source: 'custom' | 'community') => void
   setDetailSkill: (skill: ManagedSkill | null) => void
   viewSkillFiles: (skill: ManagedSkill) => void
@@ -71,7 +71,7 @@ export function ModalProvider({ children }: { children: React.ReactNode }) {
     setTagEditorSkill(null)
   }, [])
 
-  const handleViewChange = useCallback((view: 'myskills' | 'tags' | 'tools') => {
+  const handleViewChange = useCallback((view: 'myskills' | 'tags' | 'tools' | 'prompts') => {
     setInfoModalSkill(null)
     setActiveView(view)
     if (view === 'myskills') {

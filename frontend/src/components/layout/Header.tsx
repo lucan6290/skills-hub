@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { Layers, Monitor, Settings, Tag } from 'lucide-react'
+import { FileText, Layers, Monitor, Settings, Tag } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import logoLight from '@/assets/logo.svg'
 import logoDark from '@/assets/logo-dark.svg'
@@ -7,7 +7,7 @@ import logoDark from '@/assets/logo-dark.svg'
 type HeaderProps = {
   language: string
   loading: boolean
-  activeView: 'myskills' | 'detail' | 'settings' | 'tags' | 'tools'
+  activeView: 'myskills' | 'detail' | 'settings' | 'tags' | 'tools' | 'prompts'
   activeSkillSource: 'custom' | 'community'
   skillCount: number
   customSkillCount: number
@@ -15,7 +15,7 @@ type HeaderProps = {
   toolCount: number
   onToggleLanguage: () => void
   onOpenSettings: () => void
-  onViewChange: (view: 'myskills' | 'tags' | 'tools') => void
+  onViewChange: (view: 'myskills' | 'tags' | 'tools' | 'prompts') => void
   onSkillSourceChange: (source: 'custom' | 'community') => void
   t: TFunction
 }
@@ -82,6 +82,14 @@ const Header = ({
           >
             <Monitor size={15} />
             {t('navTools')}
+          </button>
+          <button
+            className={`nav-tab${activeView === 'prompts' ? ' active' : ''}`}
+            type="button"
+            onClick={() => onViewChange('prompts')}
+          >
+            <FileText size={15} />
+            {t('navPrompts')}
           </button>
         </nav>
         {(activeView === 'myskills' || activeView === 'detail') ? (

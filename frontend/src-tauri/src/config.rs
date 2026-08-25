@@ -6,6 +6,19 @@ pub const DB_FILE_NAME: &str = "skills_hub.db";
 
 pub const LEGACY_APP_IDENTIFIERS: &[&str] = &["com.tauri.dev", "com.tauri.dev.skillshub"];
 
+/// Specification for a prompt file that an AI tool uses.
+#[derive(Debug, Clone)]
+pub struct PromptFileSpec {
+    /// File name, e.g. "CLAUDE.md"
+    pub file_name: &'static str,
+    /// Scope: "global", "project", or "both"
+    pub scope: &'static str,
+    /// Global path template relative to home dir (e.g. ".claude/CLAUDE.md")
+    pub global_rel: Option<&'static str>,
+    /// Project path template relative to project root (e.g. "CLAUDE.md")
+    pub project_rel: Option<&'static str>,
+}
+
 #[derive(Debug, Clone)]
 pub struct ToolAdapterDefaults {
     pub display_name: String,
@@ -16,13 +29,14 @@ pub struct ToolAdapterDefaults {
     pub supports_junction: bool,
     pub force_copy: bool,
     pub supports_project_scope: Option<bool>,
+    pub prompt_files: Vec<PromptFileSpec>,
 }
 
 pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
     let mut map = HashMap::new();
 
     macro_rules! add_tool {
-        ($key:expr, $name:expr, $skills:expr, $detect:expr, $proj:expr, $symlink:expr, $junction:expr, $copy:expr, $scope:expr) => {
+        ($key:expr, $name:expr, $skills:expr, $detect:expr, $proj:expr, $symlink:expr, $junction:expr, $copy:expr, $scope:expr, $prompts:expr) => {
             map.insert(
                 $key.to_string(),
                 ToolAdapterDefaults {
@@ -34,6 +48,7 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
                     supports_junction: $junction,
                     force_copy: $copy,
                     supports_project_scope: $scope,
+                    prompt_files: $prompts,
                 },
             );
         };
@@ -48,7 +63,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         false,
         false,
         true,
-        Some(true)
+        Some(true),
+        vec![PromptFileSpec { file_name: ".cursorrules", scope: "project", global_rel: None, project_rel: Some(".cursorrules") }]
     );
     add_tool!(
         "claude_code",
@@ -59,7 +75,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![PromptFileSpec { file_name: "CLAUDE.md", scope: "both", global_rel: Some(".claude/CLAUDE.md"), project_rel: Some("CLAUDE.md") }]
     );
     add_tool!(
         "codex",
@@ -70,7 +87,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![PromptFileSpec { file_name: "AGENTS.md", scope: "project", global_rel: None, project_rel: Some("AGENTS.md") }]
     );
     add_tool!(
         "opencode",
@@ -81,7 +99,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "antigravity",
@@ -92,7 +111,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "amp",
@@ -103,7 +123,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "kimi_cli",
@@ -114,7 +135,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "augment",
@@ -125,7 +147,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![PromptFileSpec { file_name: "AGENTS.md", scope: "project", global_rel: None, project_rel: Some("AGENTS.md") }]
     );
     add_tool!(
         "openclaw",
@@ -136,7 +159,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "copaw",
@@ -147,7 +171,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "cline",
@@ -158,7 +183,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![PromptFileSpec { file_name: ".clinerules", scope: "project", global_rel: None, project_rel: Some(".clinerules") }]
     );
     add_tool!(
         "codebuddy",
@@ -169,7 +195,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "command_code",
@@ -180,7 +207,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "continue",
@@ -191,7 +219,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "crush",
@@ -202,7 +231,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "junie",
@@ -213,7 +243,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "iflow_cli",
@@ -224,7 +255,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "kiro_cli",
@@ -235,7 +267,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "kode",
@@ -246,7 +279,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "mcpjam",
@@ -257,7 +291,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "mistral_vibe",
@@ -268,7 +303,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "mux",
@@ -279,7 +315,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "openclaude",
@@ -290,7 +327,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "openhands",
@@ -301,7 +339,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "pi",
@@ -312,7 +351,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "qoder",
@@ -323,7 +363,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "qoderwork",
@@ -334,7 +375,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "qwen_code",
@@ -345,7 +387,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "trae",
@@ -356,7 +399,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![PromptFileSpec { file_name: ".traerules", scope: "project", global_rel: None, project_rel: Some(".traerules") }]
     );
     add_tool!(
         "trae_cn",
@@ -367,7 +411,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![PromptFileSpec { file_name: ".traerules", scope: "project", global_rel: None, project_rel: Some(".traerules") }]
     );
     add_tool!(
         "zencoder",
@@ -378,7 +423,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "neovate",
@@ -389,7 +435,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "pochi",
@@ -400,7 +447,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "adal",
@@ -411,7 +459,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "kilo_code",
@@ -422,7 +471,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![PromptFileSpec { file_name: ".kilocoderc", scope: "project", global_rel: None, project_rel: Some(".kilocoderc") }]
     );
     add_tool!(
         "roo_code",
@@ -433,7 +483,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![PromptFileSpec { file_name: ".roorules", scope: "project", global_rel: None, project_rel: Some(".roorules") }]
     );
     add_tool!(
         "goose",
@@ -444,7 +495,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![PromptFileSpec { file_name: ".gooserc", scope: "project", global_rel: None, project_rel: Some(".gooserc") }]
     );
     add_tool!(
         "gemini_cli",
@@ -455,7 +507,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![PromptFileSpec { file_name: "GEMINI.md", scope: "both", global_rel: Some(".gemini/GEMINI.md"), project_rel: Some("GEMINI.md") }]
     );
     add_tool!(
         "github_copilot",
@@ -466,7 +519,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![PromptFileSpec { file_name: "copilot-instructions.md", scope: "project", global_rel: None, project_rel: Some(".github/copilot-instructions.md") }]
     );
     add_tool!(
         "clawdbot",
@@ -477,7 +531,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "droid",
@@ -488,7 +543,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "windsurf",
@@ -499,7 +555,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![PromptFileSpec { file_name: ".windsurfrules", scope: "project", global_rel: None, project_rel: Some(".windsurfrules") }]
     );
     add_tool!(
         "moltbot",
@@ -510,7 +567,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(true)
+        Some(true),
+        vec![]
     );
     add_tool!(
         "hermes_agent",
@@ -521,7 +579,8 @@ pub fn default_tool_adapters() -> HashMap<String, ToolAdapterDefaults> {
         true,
         true,
         false,
-        Some(false)
+        Some(false),
+        vec![]
     );
 
     map

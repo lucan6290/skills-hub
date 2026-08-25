@@ -3,6 +3,7 @@ pub mod files;
 pub mod health;
 pub mod misc;
 pub mod onboarding;
+pub mod prompts;
 pub mod settings;
 pub mod skills;
 pub mod sync;

@@ -191,7 +191,23 @@ fn self_heal_schema(conn: &Connection) -> SqlResult<()> {
           FOREIGN KEY(skill_id) REFERENCES skills(id) ON DELETE CASCADE
         );
 
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_skill_usage_skill_tool ON skill_usage(skill_id, tool);",
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_skill_usage_skill_tool ON skill_usage(skill_id, tool);
+
+        CREATE TABLE IF NOT EXISTS prompt_files (
+          id TEXT PRIMARY KEY,
+          tool TEXT NOT NULL,
+          scope TEXT NOT NULL,
+          file_name TEXT NOT NULL,
+          file_path TEXT NOT NULL UNIQUE,
+          content_hash TEXT NULL,
+          exists_on_disk INTEGER NOT NULL DEFAULT 1,
+          last_scanned_at INTEGER NOT NULL,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_prompt_files_tool ON prompt_files(tool);
+        CREATE INDEX IF NOT EXISTS idx_prompt_files_scope ON prompt_files(scope);",
     )?;
 
     add_column_if_missing(conn, "skills", "description", "TEXT NULL")?;
@@ -327,7 +343,7 @@ mod tests {
             )
             .unwrap();
 
-        assert_eq!(count, 12);
+        assert_eq!(count, 13);
     }
 
     #[test]

@@ -223,6 +223,13 @@ pub fn run() {
             // update
             crate::commands::update::check_update,
             crate::commands::update::do_update,
+            // prompts
+            crate::commands::prompts::scan_prompt_files,
+            crate::commands::prompts::scan_project_prompt_files,
+            crate::commands::prompts::get_prompt_files,
+            crate::commands::prompts::read_prompt_file,
+            crate::commands::prompts::write_prompt_file,
+            crate::commands::prompts::delete_prompt_file,
             // misc
             crate::commands::misc::pick_folder,
             crate::commands::misc::cancel_current_operation,
