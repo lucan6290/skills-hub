@@ -1,4 +1,4 @@
-﻿use tauri::State;
+use tauri::State;
 
 use crate::contracts::{
     DbColumnInfo, DbMaintenanceResult, DbOverview, DbTableData, DbTableInfo, OkResponse,
@@ -347,6 +347,50 @@ pub async fn db_maintenance(
                 integrity_result: None,
             })
         }
+        "wal_checkpoint" => {
+            maint
+                .wal_checkpoint()
+                .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            Ok(DbMaintenanceResult {
+                ok: true,
+                action: "wal_checkpoint".to_string(),
+                message: "WAL checkpoint completed".to_string(),
+                integrity_result: None,
+            })
+        }
+        "reindex" => {
+            maint
+                .reindex()
+                .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            Ok(DbMaintenanceResult {
+                ok: true,
+                action: "reindex".to_string(),
+                message: "REINDEX completed".to_string(),
+                integrity_result: None,
+            })
+        }
+        "optimize" => {
+            maint
+                .optimize()
+                .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            Ok(DbMaintenanceResult {
+                ok: true,
+                action: "optimize".to_string(),
+                message: "PRAGMA optimize completed".to_string(),
+                integrity_result: None,
+            })
+        }
+        "clear_usage" => {
+            maint
+                .clear_usage()
+                .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            Ok(DbMaintenanceResult {
+                ok: true,
+                action: "clear_usage".to_string(),
+                message: "Usage records cleared".to_string(),
+                integrity_result: None,
+            })
+        }
         _ => Err(AppError::InvalidInput(format!(
             "unknown maintenance action: {}",
             action
@@ -374,11 +418,57 @@ pub async fn db_reset(state: State<'_, AppState>, confirm_text: String) -> AppRe
         })
         .map_err(|e| AppError::DatabaseError(e.to_string()))?;
 
-    // Re-initialize tool adapter configs
-    let _ = state.db.with_conn(|_conn| {
-        // The Database::new already initializes these, but after reset we need to re-init
-        Ok::<_, rusqlite::Error>(())
-    });
+    // VACUUM to reclaim space
+    state
+        .db
+        .with_conn(|conn| {
+            conn.execute_batch("VACUUM")?;
+            Ok::<_, rusqlite::Error>(())
+        })
+        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+
+    // Re-initialize tool adapter configs with defaults
+    // The Database struct's initialize_tool_adapter_configs is private,
+    // so we replicate the logic here using the public config function.
+    {
+        use crate::config::default_tool_adapters;
+        let adapters = default_tool_adapters();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as i64;
+
+        state
+            .db
+            .with_conn(|conn| {
+                let mut order = 1.0f64;
+                for (key, cfg) in &adapters {
+                    conn.execute(
+                        "INSERT OR REPLACE INTO tool_adapter_configs
+                         (tool_key, display_name, skills_dir, detect_dir, project_skills_dir,
+                          supports_symlink, supports_junction, force_copy, supports_project_scope,
+                          is_custom, enabled, sort_order, updated_at)
+                         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, 0, 1, ?10, ?11)",
+                        rusqlite::params![
+                            key,
+                            cfg.display_name,
+                            cfg.skills_dir,
+                            cfg.detect_dir,
+                            cfg.project_skills_dir,
+                            cfg.supports_symlink as i32,
+                            cfg.supports_junction as i32,
+                            cfg.force_copy as i32,
+                            cfg.supports_project_scope.map(|b| b as i32),
+                            order,
+                            now,
+                        ],
+                    )?;
+                    order += 1.0;
+                }
+                Ok::<_, rusqlite::Error>(())
+            })
+            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+    }
 
     Ok(OkResponse {
         ok: true,
@@ -387,17 +477,149 @@ pub async fn db_reset(state: State<'_, AppState>, confirm_text: String) -> AppRe
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn db_export() -> AppResult<OkResponse> {
-    // TODO: Implement file save dialog via Tauri plugin when available
-    // For now, return the db path so user can copy manually
+pub async fn db_export(app: tauri::AppHandle) -> AppResult<OkResponse> {
+    use tauri_plugin_dialog::DialogExt;
+
     let db_path = crate::config::default_db_path();
-    Ok(OkResponse {
-        ok: true,
-        message: format!(
-            "Database located at: {}. Use system file manager to copy.",
-            db_path.display()
-        ),
-    })
+    let default_name = format!(
+        "skills_hub_backup_{}.db",
+        chrono_like_timestamp()
+    );
+
+    let file_path = app
+        .dialog()
+        .file()
+        .set_title("Export Database Backup")
+        .set_file_name(&default_name)
+        .add_filter("SQLite Database", &["db"])
+        .blocking_save_file();
+
+    match file_path {
+        Some(path) => {
+            let dest = path.as_path().unwrap_or_else(|| std::path::Path::new(""));
+            if dest.as_os_str().is_empty() {
+                return Ok(OkResponse {
+                    ok: false,
+                    message: "No file selected".to_string(),
+                });
+            }
+            // Ensure .db extension
+            let dest = if dest.extension().is_none() {
+                dest.with_extension("db")
+            } else {
+                dest.to_path_buf()
+            };
+
+            std::fs::copy(&db_path, &dest).map_err(|e| {
+                AppError::FileSystemError(format!("Failed to copy database: {}", e))
+            })?;
+
+            Ok(OkResponse {
+                ok: true,
+                message: format!("Database exported to: {}", dest.display()),
+            })
+        }
+        None => Ok(OkResponse {
+            ok: false,
+            message: "Export cancelled".to_string(),
+        }),
+    }
+}
+
+fn chrono_like_timestamp() -> String {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default();
+    let secs = now.as_secs();
+    // Simple YYYYMMDD_HHMMSS format
+    let days = secs / 86400;
+    let time_of_day = secs % 86400;
+    let hours = time_of_day / 3600;
+    let minutes = (time_of_day % 3600) / 60;
+    let seconds = time_of_day % 60;
+    // Approximate date from epoch days (good enough for filename)
+    let (year, month, day) = epoch_days_to_ymd(days);
+    format!(
+        "{:04}{:02}{:02}_{:02}{:02}{:02}",
+        year, month, day, hours, minutes, seconds
+    )
+}
+
+fn epoch_days_to_ymd(days_since_epoch: u64) -> (u64, u64, u64) {
+    // Algorithm from http://howardhinnant.github.io/date_algorithms.html
+    let z = days_since_epoch + 719468;
+    let era = z / 146097;
+    let doe = z - era * 146097;
+    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
+    let y = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let d = doy - (153 * mp + 2) / 5 + 1;
+    let m = if mp < 10 { mp + 3 } else { mp - 9 };
+    let y = if m <= 2 { y + 1 } else { y };
+    (y, m, d)
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn db_import(app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> AppResult<OkResponse> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let file_path = app
+        .dialog()
+        .file()
+        .set_title("Import Database Backup")
+        .add_filter("SQLite Database", &["db"])
+        .blocking_pick_file();
+
+    match file_path {
+        Some(path) => {
+            let src = path.as_path().unwrap_or_else(|| std::path::Path::new(""));
+            if src.as_os_str().is_empty() {
+                return Ok(OkResponse {
+                    ok: false,
+                    message: "No file selected".to_string(),
+                });
+            }
+
+            // Validate it's a valid SQLite file by checking magic bytes
+            let data = std::fs::read(src).map_err(|e| {
+                AppError::FileSystemError(format!("Failed to read backup file: {}", e))
+            })?;
+            if data.len() < 16 || &data[..16] != b"SQLite format 3\0" {
+                return Err(AppError::InvalidInput(
+                    "Selected file is not a valid SQLite database".into(),
+                ));
+            }
+
+            let db_path = crate::config::default_db_path();
+
+            // Create a backup of current database first
+            let backup_path = db_path.with_extension("db.pre_import_backup");
+            if db_path.exists() {
+                std::fs::copy(&db_path, &backup_path).map_err(|e| {
+                    AppError::FileSystemError(format!("Failed to backup current database: {}", e))
+                })?;
+            }
+
+            // Copy the imported file over the current database
+            std::fs::write(&db_path, &data).map_err(|e| {
+                AppError::FileSystemError(format!("Failed to write imported database: {}", e))
+            })?;
+
+            Ok(OkResponse {
+                ok: true,
+                message: format!(
+                    "Database imported from: {}. Previous database backed up to: {}. Restart the app to apply changes.",
+                    src.display(),
+                    backup_path.display()
+                ),
+            })
+        }
+        None => Ok(OkResponse {
+            ok: false,
+            message: "Import cancelled".to_string(),
+        }),
+    }
 }
 
 #[tauri::command(rename_all = "snake_case")]

@@ -61,6 +61,7 @@ pub fn run() {
             None,
         ))
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
@@ -212,6 +213,7 @@ pub fn run() {
             crate::commands::database::db_reset,
             crate::commands::database::db_export,
             crate::commands::database::db_open_folder,
+            crate::commands::database::db_import,
             // onboarding
             crate::commands::onboarding::get_onboarding_plan,
             // tasks
