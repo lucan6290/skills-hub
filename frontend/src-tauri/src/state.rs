@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use std::time::Instant;
 
+use tauri::Manager;
+
 use crate::db::Database;
 use crate::tasks::TaskManager;
 
@@ -27,6 +29,13 @@ impl AppState {
             db: Arc::new(db),
             task_manager: Arc::new(TaskManager::new()),
         }
+    }
+}
+
+impl AppState {
+    /// Get a reference to the managed Database from an AppHandle.
+    pub fn default_db_ref(app: &tauri::AppHandle) -> Option<Arc<Database>> {
+        app.try_state::<AppState>().map(|s| s.db.clone())
     }
 }
 

@@ -13,13 +13,24 @@ import {
   X,
   Globe,
   Power,
+  XCircle,
+  Minimize2,
+  Bell,
+  FileText,
+  RefreshCw,
 } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import { toast } from 'sonner'
 import { enable, isEnabled, disable } from '@tauri-apps/plugin-autostart'
 import DatabasePanel from '@/features/database/components/DatabasePanel'
 import UpdatePanel from '@/features/settings/components/UpdatePanel'
-import { getProxyUrl, setProxyUrl } from '@/lib/api'
+import {
+  getProxyUrl, setProxyUrl,
+  getCloseBehavior, setCloseBehavior,
+  getShowTrayIcon, setShowTrayIcon,
+  getLogLevel, setLogLevel,
+  getAutoRefreshOnStartup, setAutoRefreshOnStartup,
+} from '@/lib/api'
 import logoLight from '@/assets/logo.svg'
 import logoDark from '@/assets/logo-dark.svg'
 
@@ -58,6 +69,18 @@ const THEME_OPTIONS = [
   { key: 'light', labelKey: 'settings.themeLight', Icon: Sun },
   { key: 'dark', labelKey: 'settings.themeDark', Icon: Moon },
   { key: 'system', labelKey: 'settings.themeSystem', Icon: Monitor },
+] as const
+
+const CLOSE_BEHAVIOR_OPTIONS = [
+  { key: 'minimize_to_tray', labelKey: 'settings.closeMinimizeToTray', Icon: Minimize2 },
+  { key: 'quit', labelKey: 'settings.closeQuit', Icon: XCircle },
+] as const
+
+const LOG_LEVEL_OPTIONS = [
+  { key: 'debug', labelKey: 'settings.logDebug' },
+  { key: 'info', labelKey: 'settings.logInfo' },
+  { key: 'warn', labelKey: 'settings.logWarn' },
+  { key: 'error', labelKey: 'settings.logError' },
 ] as const
 
 type PathFieldProps = {
@@ -115,9 +138,17 @@ const SettingsPage = ({
   const [autostartEnabled, setAutostartEnabled] = useState(false)
   const [autostartLoaded, setAutostartLoaded] = useState(false)
   const [autostartSaving, setAutostartSaving] = useState(false)
+  const [closeBehavior, setCloseBehaviorState] = useState('minimize_to_tray')
+  const [trayIconEnabled, setTrayIconEnabled] = useState(true)
+  const [logLevel, setLogLevelState] = useState('info')
+  const [autoRefresh, setAutoRefresh] = useState(false)
 
   useEffect(() => {
     getProxyUrl().then(setProxyUrlState).catch(() => {})
+    getCloseBehavior().then(setCloseBehaviorState).catch(() => {})
+    getShowTrayIcon().then(setTrayIconEnabled).catch(() => {})
+    getLogLevel().then(setLogLevelState).catch(() => {})
+    getAutoRefreshOnStartup().then(setAutoRefresh).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -145,6 +176,48 @@ const SettingsPage = ({
       toast.error(t('settings.saveFailed'))
     } finally {
       setAutostartSaving(false)
+    }
+  }
+
+  const handleCloseBehaviorChange = async (behavior: string) => {
+    setCloseBehaviorState(behavior)
+    try {
+      await setCloseBehavior(behavior)
+    } catch {
+      setCloseBehaviorState(closeBehavior)
+      toast.error(t('settings.saveFailed'))
+    }
+  }
+
+  const handleTrayIconToggle = async () => {
+    const next = !trayIconEnabled
+    setTrayIconEnabled(next)
+    try {
+      await setShowTrayIcon(next)
+    } catch {
+      setTrayIconEnabled(!next)
+      toast.error(t('settings.saveFailed'))
+    }
+  }
+
+  const handleLogLevelChange = async (level: string) => {
+    setLogLevelState(level)
+    try {
+      await setLogLevel(level)
+    } catch {
+      setLogLevelState(logLevel)
+      toast.error(t('settings.saveFailed'))
+    }
+  }
+
+  const handleAutoRefreshToggle = async () => {
+    const next = !autoRefresh
+    setAutoRefresh(next)
+    try {
+      await setAutoRefreshOnStartup(next)
+    } catch {
+      setAutoRefresh(!next)
+      toast.error(t('settings.saveFailed'))
     }
   }
 
@@ -342,6 +415,97 @@ const SettingsPage = ({
                   className={`settings-toggle ${autostartEnabled ? 'checked' : ''}`}
                   onClick={handleAutostartToggle}
                   disabled={!autostartLoaded || autostartSaving}
+                >
+                  <span className="settings-toggle-knob" />
+                </button>
+              </div>
+            </section>
+
+            {/* Close Behavior Section */}
+            <section className="settings-v2-card">
+              <h3 className="settings-v2-section-title">
+                <XCircle size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
+                {t('settings.closeBehaviorTitle')}
+              </h3>
+              <p className="settings-v2-section-desc">{t('settings.closeBehaviorDesc')}</p>
+              <div className="settings-v2-seg-group">
+                {CLOSE_BEHAVIOR_OPTIONS.map(({ key, labelKey, Icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    title={t(labelKey)}
+                    className={`settings-v2-seg-btn ${closeBehavior === key ? 'active' : ''}`}
+                    onClick={() => handleCloseBehaviorChange(key)}
+                  >
+                    <Icon size={14} />
+                    {t(labelKey)}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* System Tray Section */}
+            <section className="settings-v2-card">
+              <h3 className="settings-v2-section-title">
+                <Bell size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
+                {t('settings.trayIconTitle')}
+              </h3>
+              <p className="settings-v2-section-desc">{t('settings.trayIconDesc')}</p>
+              <div className="settings-v2-item">
+                <div className="settings-v2-item-info">
+                  <div className="settings-v2-item-title">{t('settings.showTrayIcon')}</div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={trayIconEnabled}
+                  className={`settings-toggle ${trayIconEnabled ? 'checked' : ''}`}
+                  onClick={handleTrayIconToggle}
+                >
+                  <span className="settings-toggle-knob" />
+                </button>
+              </div>
+            </section>
+
+            {/* Log Level Section */}
+            <section className="settings-v2-card">
+              <h3 className="settings-v2-section-title">
+                <FileText size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
+                {t('settings.logLevelTitle')}
+              </h3>
+              <p className="settings-v2-section-desc">{t('settings.logLevelDesc')}</p>
+              <div className="settings-v2-seg-group">
+                {LOG_LEVEL_OPTIONS.map(({ key, labelKey }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    title={t(labelKey)}
+                    className={`settings-v2-seg-btn ${logLevel === key ? 'active' : ''}`}
+                    onClick={() => handleLogLevelChange(key)}
+                  >
+                    {t(labelKey)}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            {/* Auto Refresh on Startup Section */}
+            <section className="settings-v2-card">
+              <h3 className="settings-v2-section-title">
+                <RefreshCw size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
+                {t('settings.autoRefreshTitle')}
+              </h3>
+              <p className="settings-v2-section-desc">{t('settings.autoRefreshDesc')}</p>
+              <div className="settings-v2-item">
+                <div className="settings-v2-item-info">
+                  <div className="settings-v2-item-title">{t('settings.autoRefreshToggle')}</div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={autoRefresh}
+                  className={`settings-toggle ${autoRefresh ? 'checked' : ''}`}
+                  onClick={handleAutoRefreshToggle}
                 >
                   <span className="settings-toggle-knob" />
                 </button>

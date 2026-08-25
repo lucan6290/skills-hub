@@ -25,6 +25,23 @@ pub fn run() {
     let log_dir = crate::config::resolve_data_dir().join("logs");
     let _ = std::fs::create_dir_all(&log_dir);
 
+    // Read log level from DB before Tauri initializes (use a temporary connection).
+    let log_level = {
+        let db_path = crate::config::default_db_path();
+        if let Ok(db) = crate::db::Database::new(&db_path) {
+            let repo = crate::repositories::SettingsRepository::new(&db);
+            repo.get("log_level").ok().flatten().unwrap_or_else(|| "info".to_string())
+        } else {
+            "info".to_string()
+        }
+    };
+    let level_filter = match log_level.as_str() {
+        "debug" => log::LevelFilter::Debug,
+        "warn" => log::LevelFilter::Warn,
+        "error" => log::LevelFilter::Error,
+        _ => log::LevelFilter::Info,
+    };
+
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().targets([
             Target::new(TargetKind::Stdout),
@@ -33,7 +50,7 @@ pub fn run() {
                 file_name: Some("skills-hub".to_string()),
             }),
             Target::new(TargetKind::Webview),
-        ]).build())
+        ]).level(level_filter).build())
         // single-instance must be the first plugin; the deep-link feature forwards
         // scheme URLs from a second process to the running instance.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -60,15 +77,29 @@ pub fn run() {
         .setup(|app| {
             build_tray(app.handle())?;
 
-            // Intercept the close button: hide the window instead of quitting
-            // so the app stays resident in the system tray.
+            // Intercept the close button based on user setting:
+            // "minimize_to_tray" (default) → hide window; "quit" → exit app.
             let main_window = app
                 .get_webview_window("main")
                 .expect("main window not found");
+            let app_handle = app.handle().clone();
+            let db_for_close = state::AppState::default_db_ref(&app_handle);
             main_window.clone().on_window_event(move |event| {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                    api.prevent_close();
-                    let _ = main_window.hide();
+                    let behavior = db_for_close.as_ref()
+                        .and_then(|db| {
+                            let repo = crate::repositories::SettingsRepository::new(db);
+                            repo.get("close_behavior").ok().flatten()
+                        })
+                        .unwrap_or_else(|| "minimize_to_tray".to_string());
+
+                    if behavior == "quit" {
+                        // Allow the window to close and quit the app
+                        app_handle.exit(0);
+                    } else {
+                        api.prevent_close();
+                        let _ = main_window.hide();
+                    }
                 }
             });
 
@@ -87,6 +118,29 @@ pub fn run() {
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
                 let _ = app.deep_link().register_all();
+            }
+
+            // Auto-refresh repo registries on startup if enabled.
+            {
+                let state = app.state::<state::AppState>();
+                let repo = crate::repositories::SettingsRepository::new(&state.db);
+                let auto_refresh = repo.get("auto_refresh_on_startup")
+                    .ok()
+                    .flatten()
+                    .map(|v| v == "true")
+                    .unwrap_or(false);
+                if auto_refresh {
+                    let db = state.db.clone();
+                    std::thread::spawn(move || {
+                        match crate::repo::scanner::sync_all_repo_registries(&db) {
+                            Ok(result) => log::info!(
+                                "启动时自动刷新完成: registered={}, removed={}",
+                                result.registered, result.removed
+                            ),
+                            Err(e) => log::warn!("启动时自动刷新失败: {}", e),
+                        }
+                    });
+                }
             }
 
             Ok(())
