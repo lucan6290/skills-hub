@@ -123,9 +123,22 @@ import './styles/index.css'  // ② 模块化组件样式（@import 聚合）
 | | `--danger-soft-bg-strong` | `#ffe7e2` |
 | **字体** | `--font-ui` | `"IBM Plex Sans", "Microsoft YaHei UI", "PingFang SC", system-ui, ...` |
 | | `--font-mono` | `"IBM Plex Mono", ui-monospace, SFMono-Regular, ...` |
-| **圆角** | `--radius-sm` / `--radius-md` / `--radius-lg` | `4px` / `8px` / `8px` |
-| **阴影** | `--shadow-sm` | `0 1px 2px 0 rgb(36 28 15 / 0.08)` |
-| | `--shadow-lg` | `0 18px 40px -24px rgb(36 28 15 / 0.45)` |
+| **项目作用域色** | `--accent-project` | `#2563eb` |
+| | `--accent-project-hover` | `#1d4ed8` |
+| | `--accent-project-soft-bg` | `rgba(37, 99, 235, 0.08)` |
+| | `--accent-project-soft-border` | `rgba(37, 99, 235, 0.35)` |
+| **品牌色** | `--brand-accent` | `#b8613c`（Hub 文字颜色） |
+| **别名** | `--text-muted` | `var(--text-tertiary)` |
+| | `--success` | `var(--status-success)` |
+| | `--danger` | `var(--status-error)` |
+| **强调阴影** | `--accent-primary-shadow` | `rgba(29, 113, 128, 0.2)` |
+| | `--accent-primary-shadow-strong` | `rgba(29, 113, 128, 0.3)` |
+| **字号层级** | `--text-xs` ~ `--text-4xl` | `11px` ~ `24px`（10 级） |
+| **行高** | `--leading-tight` / `--leading-snug` / `--leading-normal` / `--leading-relaxed` | `1.2` / `1.35` / `1.5` / `1.6` |
+| **圆角** | `--radius-sm` / `--radius-md` / `--radius-lg` / `--radius-xl` | `4px` / `8px` / `8px` / `12px` |
+| **阴影** | `--shadow-xs` / `--shadow-sm` / `--shadow-md` / `--shadow-lg` | 4 级递进 |
+| **过渡** | `--transition-fast` / `--transition-base` / `--transition-slow` | `0.15s` / `0.2s` / `0.3s` |
+| | `--ease-out` / `--ease-spring` | `cubic-bezier(0.4, 0, 0.2, 1)` / `cubic-bezier(0.34, 1.56, 0.64, 1)` |
 
 ### 4.2 暗色模式（`:root[data-theme='dark']`，覆盖）
 
