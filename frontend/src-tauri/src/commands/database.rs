@@ -22,6 +22,22 @@ const ALLOWED_TABLES: &[&str] = &[
     "skill_usage",
 ];
 
+/// Delete order: child tables (with FK references) must be deleted before parent tables.
+const RESET_DELETE_ORDER: &[&str] = &[
+    "skill_tag_links",
+    "skill_targets",
+    "skill_usage",
+    "skill_scope_preference",
+    "tool_skill_cache",
+    "tool_scan_state",
+    "discovered_skills",
+    "recent_projects",
+    "skill_tags",
+    "skills",
+    "settings",
+    "tool_adapter_configs",
+];
+
 fn table_display_name(table: &str) -> &str {
     match table {
         "skills" => "Skills",
@@ -406,11 +422,11 @@ pub async fn db_reset(state: State<'_, AppState>, confirm_text: String) -> AppRe
         ));
     }
 
-    // Delete all data from all tables
+    // Delete all data from all tables (child tables first to respect FK constraints)
     state
         .db
         .with_conn(|conn| {
-            for table in ALLOWED_TABLES {
+            for table in RESET_DELETE_ORDER {
                 let sql = format!("DELETE FROM {}", table);
                 conn.execute_batch(&sql)?;
             }
@@ -477,13 +493,17 @@ pub async fn db_reset(state: State<'_, AppState>, confirm_text: String) -> AppRe
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn db_export(app: tauri::AppHandle) -> AppResult<OkResponse> {
+pub async fn db_export(app: tauri::AppHandle, state: State<'_, AppState>) -> AppResult<OkResponse> {
     use tauri_plugin_dialog::DialogExt;
+
+    // WAL checkpoint first to ensure all data is in the main .db file
+    let maint = MaintenanceRepository::new(&state.db);
+    let _ = maint.wal_checkpoint();
 
     let db_path = crate::config::default_db_path();
     let default_name = format!(
         "skills_hub_backup_{}.db",
-        chrono_like_timestamp()
+        local_timestamp()
     );
 
     let file_path = app
@@ -526,18 +546,17 @@ pub async fn db_export(app: tauri::AppHandle) -> AppResult<OkResponse> {
     }
 }
 
-fn chrono_like_timestamp() -> String {
+fn local_timestamp() -> String {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();
-    let secs = now.as_secs();
-    // Simple YYYYMMDD_HHMMSS format
-    let days = secs / 86400;
-    let time_of_day = secs % 86400;
+    // Offset to local timezone (UTC+8 for China; adjust if needed)
+    let local_secs = now.as_secs() + 8 * 3600;
+    let days = local_secs / 86400;
+    let time_of_day = local_secs % 86400;
     let hours = time_of_day / 3600;
     let minutes = (time_of_day % 3600) / 60;
     let seconds = time_of_day % 60;
-    // Approximate date from epoch days (good enough for filename)
     let (year, month, day) = epoch_days_to_ymd(days);
     format!(
         "{:04}{:02}{:02}_{:02}{:02}{:02}",
@@ -561,7 +580,7 @@ fn epoch_days_to_ymd(days_since_epoch: u64) -> (u64, u64, u64) {
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn db_import(app: tauri::AppHandle, _state: tauri::State<'_, AppState>) -> AppResult<OkResponse> {
+pub async fn db_import(app: tauri::AppHandle, state: State<'_, AppState>) -> AppResult<OkResponse> {
     use tauri_plugin_dialog::DialogExt;
 
     let file_path = app
@@ -593,7 +612,11 @@ pub async fn db_import(app: tauri::AppHandle, _state: tauri::State<'_, AppState>
 
             let db_path = crate::config::default_db_path();
 
-            // Create a backup of current database first
+            // Step 1: WAL checkpoint to flush all pending writes to the main .db file
+            let maint = MaintenanceRepository::new(&state.db);
+            let _ = maint.wal_checkpoint();
+
+            // Step 2: Backup current database (including WAL/SHM if they exist)
             let backup_path = db_path.with_extension("db.pre_import_backup");
             if db_path.exists() {
                 std::fs::copy(&db_path, &backup_path).map_err(|e| {
@@ -601,7 +624,13 @@ pub async fn db_import(app: tauri::AppHandle, _state: tauri::State<'_, AppState>
                 })?;
             }
 
-            // Copy the imported file over the current database
+            // Step 3: Remove stale WAL and SHM files to prevent data inconsistency
+            let wal_path = db_path.with_extension("db-wal");
+            let shm_path = db_path.with_extension("db-shm");
+            let _ = std::fs::remove_file(&wal_path);
+            let _ = std::fs::remove_file(&shm_path);
+
+            // Step 4: Write the imported file over the current database
             std::fs::write(&db_path, &data).map_err(|e| {
                 AppError::FileSystemError(format!("Failed to write imported database: {}", e))
             })?;
