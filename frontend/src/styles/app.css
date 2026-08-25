@@ -1104,20 +1104,28 @@
   }
 
   .header-left {
-    flex: 1 1 auto;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
+    display: contents;
   }
 
   .brand-area {
     min-width: 0;
+    order: 1;
+  }
+
+  .header-actions {
+    order: 2;
+    margin-left: auto;
   }
 
   .nav-tabs {
+    order: 3;
     flex: 1 1 100%;
     overflow-x: auto;
+  }
+
+  .source-tabs {
+    order: 4;
+    flex: 1 1 100%;
   }
 
   .filter-bar {
