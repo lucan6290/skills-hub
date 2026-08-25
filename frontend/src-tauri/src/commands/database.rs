@@ -561,7 +561,7 @@ fn epoch_days_to_ymd(days_since_epoch: u64) -> (u64, u64, u64) {
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn db_import(app: tauri::AppHandle, state: tauri::State<'_, AppState>) -> AppResult<OkResponse> {
+pub async fn db_import(app: tauri::AppHandle, _state: tauri::State<'_, AppState>) -> AppResult<OkResponse> {
     use tauri_plugin_dialog::DialogExt;
 
     let file_path = app

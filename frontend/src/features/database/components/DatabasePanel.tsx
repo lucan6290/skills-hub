@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Database,
   Download,
+  Upload,
   RefreshCw,
   Search,
   Shield,
@@ -27,6 +28,7 @@ import {
   runDbMaintenance,
   resetDb,
   exportDb,
+  importDb,
   openDbFolder,
   type DbOverview,
   type DbTableData,
@@ -51,8 +53,12 @@ const MAINTENANCE_ACTIONS: MaintenanceAction[] = [
   { key: 'integrity_check', label_key: 'db.integrityCheck', desc_key: 'db.integrityCheckDesc', danger: false },
   { key: 'vacuum', label_key: 'db.vacuum', desc_key: 'db.vacuumDesc', danger: false },
   { key: 'analyze', label_key: 'db.analyze', desc_key: 'db.analyzeDesc', danger: false },
+  { key: 'wal_checkpoint', label_key: 'db.walCheckpoint', desc_key: 'db.walCheckpointDesc', danger: false },
+  { key: 'reindex', label_key: 'db.reindex', desc_key: 'db.reindexDesc', danger: false },
+  { key: 'optimize', label_key: 'db.optimize', desc_key: 'db.optimizeDesc', danger: false },
   { key: 'clear_cache', label_key: 'db.clearCache', desc_key: 'db.clearCacheDesc', danger: true },
   { key: 'clear_discovered', label_key: 'db.clearDiscovered', desc_key: 'db.clearDiscoveredDesc', danger: true },
+  { key: 'clear_usage', label_key: 'db.clearUsage', desc_key: 'db.clearUsageDesc', danger: true },
 ]
 
 const FRAG_WARN_THRESHOLD = 20
@@ -206,6 +212,19 @@ const DatabasePanel = ({ t }: DatabasePanelProps) => {
       toast.error(err instanceof Error ? err.message : 'Export failed')
     }
   }, [t])
+
+  const handleImport = useCallback(async () => {
+    try {
+      const result = await importDb()
+      if (result.ok) {
+        toast.success(result.message)
+      } else {
+        toast.error(result.message || 'Import failed')
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Import failed')
+    }
+  }, [])
 
   const handleCopyPath = useCallback(async () => {
     if (!overview?.db_path) return
@@ -601,6 +620,24 @@ const DatabasePanel = ({ t }: DatabasePanelProps) => {
         >
           <Download size={14} className="db-maint-btn-icon" />
           {t('db.download')}
+        </button>
+      </div>
+
+      <div className="db-maint-card">
+        <div className="db-maint-info">
+          <div className="db-maint-title">
+            <Upload size={16} className="db-maint-title-icon" />
+            {t('db.importBackup')}
+          </div>
+          <div className="db-maint-desc">{t('db.importBackupDesc')}</div>
+        </div>
+        <button
+          className="btn-secondary"
+          onClick={handleImport}
+          type="button"
+        >
+          <Upload size={14} className="db-maint-btn-icon" />
+          {t('db.importBtn')}
         </button>
       </div>
 
