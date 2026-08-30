@@ -21,11 +21,18 @@
 //!    `latest.json` + signed installers, and upload `latest.json` as a release asset.
 
 use serde::{Deserialize, Serialize};
+use std::sync::{Mutex, OnceLock};
+use std::time::{Duration, Instant};
 
 pub const GITHUB_OWNER: &str = "lucan6290";
 pub const GITHUB_REPO: &str = "skills-hub";
 pub const RELEASES_PAGE: &str = "https://github.com/lucan6290/skills-hub/releases";
 pub const CHANGELOG_URL: &str = "https://github.com/lucan6290/skills-hub/blob/main/CHANGELOG.md";
+
+/// 成功结果缓存时长（发布信息很少变化，缓存 30 分钟）。
+const CACHE_TTL_SUCCESS: Duration = Duration::from_secs(30 * 60);
+/// 错误结果缓存时长（限流/网络错误，缓存 5 分钟避免频繁重试加剧限流）。
+const CACHE_TTL_ERROR: Duration = Duration::from_secs(5 * 60);
 
 /// Response from the update check.
 #[derive(Debug, Clone, Serialize)]
@@ -70,7 +77,7 @@ fn empty_download_urls() -> DownloadUrls {
 }
 
 /// GitHub API response structure (partial).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct GithubRelease {
     tag_name: Option<String>,
     html_url: Option<String>,
@@ -78,20 +85,106 @@ struct GithubRelease {
     assets: Option<Vec<GithubAsset>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct GithubAsset {
     name: Option<String>,
     browser_download_url: Option<String>,
 }
 
-/// Check for updates via GitHub Releases API.
+/// 内存中的缓存条目，缓存原始 API 结果（成功或失败）。
+struct CachedEntry {
+    fetched_at: Instant,
+    /// 成功时为 Ok(release)，失败时为 Err(error_message)。
+    result: Result<GithubRelease, String>,
+}
+
+/// 进程内全局缓存，首次访问时初始化。
+fn cache() -> &'static Mutex<Option<CachedEntry>> {
+    static CACHE: OnceLock<Mutex<Option<CachedEntry>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(None))
+}
+
+/// Check for updates via GitHub Releases API (with in-memory caching).
+///
+/// 缓存策略：
+/// - 成功结果缓存 30 分钟（CACHE_TTL_SUCCESS），避免每次打开设置页面都请求 API
+/// - 错误结果（限流/网络错误）缓存 5 分钟（CACHE_TTL_ERROR），避免频繁重试加剧限流
+/// - 缓存基于原始 API 响应，update_available 每次调用时根据 current_version 重新计算，
+///   这样即使应用升级了版本号，仍能用缓存的发布信息正确判断是否为最新
 pub fn check_for_update(current_version: &str, install_mode: &str) -> CheckUpdateResponse {
     let url = format!(
         "https://api.github.com/repos/{}/{}/releases/latest",
         GITHUB_OWNER, GITHUB_REPO
     );
 
-    match fetch_release_info(&url) {
+    // 1. 检查缓存是否有效
+    let fetch_result = {
+        let guard = cache().lock().unwrap();
+        if let Some(entry) = guard.as_ref() {
+            let (ttl, label) = match &entry.result {
+                Ok(_) => (CACHE_TTL_SUCCESS, "success"),
+                Err(_) => (CACHE_TTL_ERROR, "error"),
+            };
+            let age = entry.fetched_at.elapsed();
+            if age < ttl {
+                let remaining = ttl - age;
+                log::info!(
+                    "[update-check] cache HIT ({}, age={:.1}s, ttl={}s, remaining={:.1}s)",
+                    label,
+                    age.as_secs_f64(),
+                    ttl.as_secs(),
+                    remaining.as_secs_f64()
+                );
+                entry.result.clone()
+            } else {
+                log::info!(
+                    "[update-check] cache EXPIRED ({}, age={:.1}s, ttl={}s), fetching fresh data...",
+                    label,
+                    age.as_secs_f64(),
+                    ttl.as_secs()
+                );
+                drop(guard);
+                fetch_and_cache(&url)
+            }
+        } else {
+            log::info!("[update-check] cache MISS (no entry), fetching fresh data...");
+            drop(guard);
+            fetch_and_cache(&url)
+        }
+    };
+
+    build_response(current_version, install_mode, fetch_result)
+}
+
+/// 从 GitHub API 获取发布信息并写入缓存。
+fn fetch_and_cache(url: &str) -> Result<GithubRelease, String> {
+    log::info!("[update-check] → GET {}", url);
+    let result = fetch_release_info(url);
+    match &result {
+        Ok(release) => {
+            let tag = release.tag_name.as_deref().unwrap_or("(no tag)");
+            log::info!("[update-check] ← 200 OK, latest={}", tag);
+        }
+        Err(e) => {
+            log::warn!("[update-check] ← request failed: {}", e);
+        }
+    }
+    let entry = CachedEntry {
+        fetched_at: Instant::now(),
+        result: result.clone(),
+    };
+    *cache().lock().unwrap() = Some(entry);
+    log::info!("[update-check] cache UPDATED");
+    result
+}
+
+/// 将 API 请求结果（成功或失败）构建为 CheckUpdateResponse。
+fn build_response(
+    current_version: &str,
+    install_mode: &str,
+    fetch_result: Result<GithubRelease, String>,
+) -> CheckUpdateResponse {
+    match fetch_result {
         Ok(release) => {
             let tag_name = release.tag_name.unwrap_or_default();
             let latest_version = tag_name.trim_start_matches('v').to_string();
@@ -100,7 +193,6 @@ pub fn check_for_update(current_version: &str, install_mode: &str) -> CheckUpdat
                 .unwrap_or_else(|| RELEASES_PAGE.to_string());
             let body = release.body.unwrap_or_default();
 
-            // Extract download URLs from assets
             let mut urls = empty_download_urls();
             if let Some(assets) = &release.assets {
                 for asset in assets {
