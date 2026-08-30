@@ -25,6 +25,36 @@ pub fn run() {
     let log_dir = crate::config::resolve_data_dir().join("logs");
     let _ = std::fs::create_dir_all(&log_dir);
 
+    // Install a panic hook so that crashes are captured in the dedicated error
+    // log file. Without this, panics only print to stderr and are lost in a
+    // GUI application.
+    let error_log_path = log_dir.join("skills-hub-error.log");
+    std::panic::set_hook(Box::new(move |panic_info| {
+        use std::io::Write;
+        let now = time::OffsetDateTime::now_utc();
+        let timestamp = format!(
+            "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
+            now.year(),
+            u8::from(now.month()),
+            now.day(),
+            now.hour(),
+            now.minute(),
+            now.second()
+        );
+        let _ = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&error_log_path)
+            .and_then(|mut f| {
+                writeln!(f, "[{}] [PANIC] {}", timestamp, panic_info)?;
+                writeln!(f, "--------------------------------------------------")?;
+                Ok(())
+            });
+        // Also attempt to route through the regular logger (may fail if the
+        // panic originated inside the logger itself).
+        log::error!("PANIC: {}", panic_info);
+    }));
+
     // Read log level from DB before Tauri initializes (use a temporary connection).
     let log_level = {
         let db_path = crate::config::default_db_path();
@@ -46,9 +76,16 @@ pub fn run() {
         .plugin(tauri_plugin_log::Builder::new().targets([
             Target::new(TargetKind::Stdout),
             Target::new(TargetKind::Folder {
-                path: log_dir,
+                path: log_dir.clone(),
                 file_name: Some("skills-hub".to_string()),
             }),
+            // Dedicated error log: only captures Error-level messages
+            // → skills-hub-error.log
+            Target::new(TargetKind::Folder {
+                path: log_dir,
+                file_name: Some("skills-hub-error".to_string()),
+            })
+            .filter(|metadata| metadata.level() == log::Level::Error),
             Target::new(TargetKind::Webview),
         ]).level(level_filter).build())
         // single-instance must be the first plugin; the deep-link feature forwards
