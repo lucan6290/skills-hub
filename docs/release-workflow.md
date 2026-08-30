@@ -1,0 +1,480 @@
+# Release Workflow — Agent 发布工作流
+
+> 本文件定义 Agent 执行 Skills Hub 版本发布的完整标准流程。Agent 收到发布指令后，必须严格按本文件顺序执行，不得跳步。
+>
+> **路径规则**：所有命令块在执行前确保当前目录为项目根目录（`e:\A-Code\skills-hub`）。使用 `pushd`/`popd` 切换子目录，避免 `cd` 链式依赖。
+>
+> **PowerShell 注意事项**：
+> - 所有 HTTP 请求必须使用 `curl.exe`（不是 `curl`——PS5 中 `curl` 是 `Invoke-WebRequest` 的别名，语法不同）
+> - `curl.exe` 输出通过管道传给 `ConvertFrom-Json` 时，必须先经 `| Out-String` 合并多行（PS5 中逐行传递会解析失败）
+> - 反引号 `` ` `` 续行符后面**不能有空格**，必须紧跟换行符
+
+## 概述
+
+发布流程分为 **7 个阶段**，每个阶段有明确的检查点和失败处理：
+
+```
+阶段 1: 前置检查 → 阶段 2: 确定版本号 → 阶段 3: 质量门禁
+→ 阶段 4: 生成 CHANGELOG → 阶段 5: 更新版本号 → 阶段 6: 提交/打 tag/推送
+→ 阶段 7: 监控 CI 构建
+```
+
+---
+
+## 阶段 1：前置检查
+
+在开始任何发布操作前，必须逐一通过以下检查。任一项失败则停止流程并报告。
+
+### 1.1 确认工作目录
+
+```powershell
+# 必须在项目根目录
+Get-Location  # 应输出包含 skills-hub 的路径
+```
+
+### 1.2 检查 git 状态
+
+```powershell
+git status --porcelain
+git branch --show-current
+git remote -v
+```
+
+检查项：
+- 当前分支必须是 `main`
+- 工作区必须干净（`git status --porcelain` 无输出）。若有未提交改动，询问用户是否先提交或 stash，**不得擅自处理用户的未提交改动**
+- 远程仓库 `origin` 指向 `https://github.com/lucan6290/skills-hub.git`
+
+### 1.3 检查网络/代理
+
+```powershell
+# 测试 GitHub 连通性（必须用 curl.exe，不能用 curl）
+curl.exe -s -o NUL -w "%{http_code}" https://github.com
+```
+
+- 返回 200/301/302 → 正常，继续
+- 返回 000 或超时 → 按 `AGENTS.md` 中的网络代理规范设置 `$env:HTTP_PROXY`/`$env:HTTPS_PROXY` 后重试
+
+### 1.4 同步远程最新代码
+
+```powershell
+git pull origin main
+```
+
+### 1.5 获取最新 tags
+
+```powershell
+git fetch --tags
+```
+
+---
+
+## 阶段 2：确定版本号
+
+### 2.1 确认当前版本
+
+```powershell
+node scripts/version.mjs check
+```
+
+记录当前版本号，记为 `CURRENT_VERSION`（如 `0.2.0`）。
+
+### 2.2 确认上一个 release tag
+
+```powershell
+git describe --tags --abbrev=0
+```
+
+记录输出，记为 `LAST_TAG`（如 `v0.2.0`）。
+
+### 2.3 分析自上版本以来的变更规模
+
+```powershell
+git log "$LAST_TAG..HEAD" --oneline
+```
+
+统计：
+- `feat:` / `功能:` 前缀的 commit 数量 → 如有，至少需要 MINOR 版本
+- 包含 `BREAKING CHANGE` 或不兼容变更的 commit → 需要 MAJOR 版本
+- 只有 `fix:` / `修正:` 前缀 → PATCH 版本
+
+### 2.4 与用户确认新版本号
+
+使用 `AskUserQuestion` 向用户确认版本号。根据 2.3 的分析提供推荐选项，**不得擅自决定版本号**。
+
+确认后记为 `NEW_VERSION`（如 `0.3.0`），tag 名为 `TAG_NAME = "v$NEW_VERSION"`（如 `v0.3.0`）。
+
+### 2.5 检查 tag 是否已存在
+
+```powershell
+# 检查本地 tag
+git tag -l "$TAG_NAME"
+# 检查远程 tag
+git ls-remote --tags origin "$TAG_NAME"
+```
+
+如果本地或远程已存在同名 tag：
+- 向用户报告，询问是否为重新发布
+- 如果是重新发布（CI 上次失败后修复重发），按阶段 7.3 中的"重发 tag"流程先删除旧 tag
+- 如果不是重新发布，停止流程让用户决定版本号
+
+---
+
+## 阶段 3：质量门禁（完整构建验证）
+
+**必须全部通过**才能继续发布。任一项失败需报告错误并等待用户指示。
+
+> 所有命令从项目根目录出发，使用 `pushd`/`popd` 管理目录。
+
+### 3.1 安装/确认前端依赖
+
+```powershell
+pushd frontend
+npm ci
+popd
+```
+
+- 如果 `npm ci` 失败（如 package-lock.json 与 package.json 不同步），执行 `npm install` 更新 lockfile，并告知用户 lockfile 有变更需纳入提交
+- 否则继续
+
+### 3.2 前端检查
+
+```powershell
+pushd frontend
+npm run check
+popd
+```
+
+（`npm run check` = `npm run lint` + `npm run build`）
+
+- 如果 lint 有可自动修复的错误，可执行 `pushd frontend; npm run lint -- --fix; popd` 后重新 check
+- 如果有 TypeScript 类型错误，必须报告用户，不得继续
+- 此步骤会在 `frontend/dist/` 生成前端构建产物，Rust 编译需要引用
+
+### 3.3 Rust 测试
+
+```powershell
+pushd frontend/src-tauri
+cargo test
+popd
+```
+
+- 所有测试必须通过
+- 如果测试失败，报告失败详情，等待用户修复
+
+### 3.4 Rust release 编译检查
+
+```powershell
+pushd frontend/src-tauri
+cargo build --release
+popd
+```
+
+- release 模式必须能成功编译
+- 编译失败则报告错误并停止
+- 此步骤只编译 Rust 代码，不执行 Tauri bundle（不需要 NSIS 工具链），因为 3.2 已生成 `dist/` 目录，`beforeBuildCommand` 不会重复执行
+
+> 注意：`cargo build --release` 编译时间较长（5-15 分钟），属于正常现象。完整的 Tauri bundle 构建（NSIS/MSI 安装包）在 CI 环境执行，本地不需要。
+
+---
+
+## 阶段 4：生成 CHANGELOG
+
+### 4.1 提取自上一个 tag 以来的 commits
+
+```powershell
+git log "${LAST_TAG}..HEAD" --pretty=format:"%h %s"
+```
+
+### 4.2 分类 commits
+
+按以下规则将 commits 分类到 CHANGELOG 的四个部分：
+
+| CHANGELOG 分类 | commit 前缀（不区分大小写） | 说明 |
+|---|---|---|
+| **Added** | `feat:`、`功能:`、`add:` | 新功能、新特性 |
+| **Changed** | `refactor:`、`重构:`、`style:`、`样式:`、`perf:`、`优化:`、`change:` | 重构、样式改进、性能优化 |
+| **Fixed** | `fix:`、`修正:`、`bug:`、`修复:` | Bug 修复 |
+| **Technical** | `build:`、`ci:`、`docs:`、`test:`、`deps:`、`技术:`、`chore:` | 构建系统、CI、文档、测试、依赖、杂项 |
+
+过滤规则：
+- 提交信息以 `release:` 开头的 commit 跳过不纳入（它们是版本提交本身）
+- 合并语义相同的 commits（如多个 fix 同一个问题的 commit 合并为一条）
+- 如果某个 commit 的描述不够清晰（如 `fix: 修复问题`），使用 `git show <hash>` 查看 diff 补充上下文
+
+### 4.3 生成 CHANGELOG 条目
+
+在 `CHANGELOG.md` 的 `## [Unreleased]` 行**下方**插入新版本条目。先获取当前日期：
+
+```powershell
+$TODAY = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId((Get-Date), "China Standard Time").ToString("yyyy-MM-dd")
+```
+
+条目格式：
+
+```markdown
+## [NEW_VERSION] - TODAY_DATE
+
+### Added
+- 中文描述（基于 commit message 润色，去除前缀）
+
+### Changed
+- 中文描述
+
+### Fixed
+- 中文描述
+
+### Technical
+- 中文描述
+```
+
+写作规则：
+- 如果某分类没有 commits，该分类标题省略不写
+- 将 commit message 中的前缀（`feat:`, `fix:`, `功能:` 等）去除
+- 使用简洁的中文，面向用户而非开发者
+- **不得包含内部实现细节**（如具体文件名、变量名、函数名），应描述用户可感知的变化
+- 每条以 `- ` 开头，结尾不加标点
+
+### 4.4 插入到 CHANGELOG.md
+
+将生成的内容插入到 CHANGELOG.md 中 `## [Unreleased]` 行的下一行，即在 `## [Unreleased]` 和上一个版本条目之间。
+
+插入后 CHANGELOG.md 的结构应为：
+
+```markdown
+# Changelog
+
+...
+
+## [Unreleased]
+
+## [NEW_VERSION] - YYYY-MM-DD
+
+### Added
+...
+
+## [OLD_VERSION] - YYYY-MM-DD
+...
+```
+
+### 4.5 展示给用户审阅
+
+生成 CHANGELOG 后，**必须展示完整内容给用户审阅**，等待用户确认或修改。用户确认后才继续。
+
+---
+
+## 阶段 5：更新版本号
+
+### 5.1 执行版本更新脚本
+
+```powershell
+node scripts/version.mjs set $NEW_VERSION
+```
+
+预期输出应包含三行变更：
+- `frontend/package.json: OLD_VERSION -> NEW_VERSION`
+- `Cargo.toml: OLD_VERSION -> NEW_VERSION`
+- `frontend/package-lock.json: (old) -> NEW_VERSION`
+
+### 5.2 校验版本一致性
+
+```powershell
+node scripts/version.mjs check
+```
+
+必须输出 `Version OK (NEW_VERSION) — frontend, Rust backend & lockfile in sync`。
+
+### 5.3 验证 CHANGELOG 可被 CI 正确提取
+
+```powershell
+node scripts/extract-changelog.mjs "v$NEW_VERSION"
+```
+
+- 必须输出以 `## vNEW_VERSION` 开头的内容（即刚才写的 CHANGELOG 条目）
+- 如果退出码非 0 或输出为空，说明 CHANGELOG 格式不正确（如标题不匹配），修正后重新验证
+- 这一步模拟 CI 的 release notes 提取逻辑，确保不会 fallback 到默认文案
+
+---
+
+## 阶段 6：提交、打 Tag、推送
+
+### 6.1 检查变更文件
+
+```powershell
+git status
+git diff --stat
+```
+
+确认只有以下文件被修改：
+- `CHANGELOG.md`
+- `frontend/package.json`
+- `frontend/package-lock.json`
+- `frontend/src-tauri/Cargo.toml`
+
+如果有其他文件变更（如 3.1 中 `npm install` 更新了 lockfile 中其他字段、或 `eslint --fix` 修改了源文件），向用户报告并确认是否纳入。
+
+### 6.2 提交
+
+```powershell
+git add CHANGELOG.md frontend/package.json frontend/package-lock.json frontend/src-tauri/Cargo.toml
+git commit -m "release: v${NEW_VERSION}"
+```
+
+提交消息格式：`release: vNEW_VERSION`（如 `release: v0.3.0`）。
+
+### 6.3 打 annotated tag
+
+再次确认 tag 不存在（阶段 2.5 已检查，但此处二次确认防止并发操作）：
+
+```powershell
+if (git tag -l "$TAG_NAME") { throw "Tag $TAG_NAME already exists locally" }
+git tag -a "$TAG_NAME" -m "v${NEW_VERSION} 版本发布"
+```
+
+验证 tag 指向正确的 commit：
+
+```powershell
+git log -1 --oneline "$TAG_NAME"
+```
+
+### 6.4 推送到远程
+
+> **注意**：按 AGENTS.md 规则，`git push` 需要用户明确授权。在执行 push 前必须告知用户即将推送的内容（main 分支的 release commit + tag）并获得确认。
+
+```powershell
+git push origin main
+git push origin "$TAG_NAME"
+```
+
+---
+
+## 阶段 7：监控 CI 构建
+
+### 7.1 记录关键信息
+
+```powershell
+$RELEASE_COMMIT = git rev-parse HEAD
+$RELEASE_COMMIT = $RELEASE_COMMIT.Substring(0, 7)
+$TAG_NAME = "v${NEW_VERSION}"
+Write-Host "Release commit: $RELEASE_COMMIT, Tag: $TAG_NAME"
+```
+
+### 7.2 等待并定位 CI Workflow Run
+
+release workflow 由 **tag push 事件**触发（不是 branch push），需要通过以下方式查询：
+
+```powershell
+Start-Sleep -Seconds 30  # 等待 CI 启动
+
+# 查询 release.yml workflow 最近的 runs，通过 tag 名称匹配
+# 注意：curl.exe 输出需经 Out-String 合并为单字符串再给 ConvertFrom-Json
+$runs = curl.exe -s `
+  -H "Accept: application/vnd.github+json" `
+  -H "User-Agent: SkillsHub-Release-Checker" `
+  "https://api.github.com/repos/lucan6290/skills-hub/actions/workflows/release.yml/runs?per_page=10" | Out-String | ConvertFrom-Json
+
+$run = $runs.workflow_runs | Where-Object { $_.head_branch -eq "$TAG_NAME" -and $_.event -eq "push" } | Select-Object -First 1
+
+if (-not $run) {
+  Write-Warning "未找到 tag $TAG_NAME 对应的 release workflow run，请手动检查 https://github.com/lucan6290/skills-hub/actions"
+  return
+}
+
+Write-Host "CI Run found: $($run.html_url)"
+```
+
+> **限流处理**：GitHub API 未认证请求限制为 60 次/小时。如果收到 403 响应（`"API rate limit exceeded"`），停止自动轮询，改为提示用户在浏览器中打开 Actions 页面手动监控。
+
+### 7.3 轮询构建状态
+
+```powershell
+$maxPolls = 40  # 最多轮询 40 分钟（CI 通常 15-25 分钟完成）
+$pollCount = 0
+
+while ($pollCount -lt $maxPolls) {
+  Start-Sleep -Seconds 60
+  $pollCount++
+
+  try {
+    $status = curl.exe -s `
+      -H "Accept: application/vnd.github+json" `
+      -H "User-Agent: SkillsHub-Release-Checker" `
+      $run.url | Out-String | ConvertFrom-Json
+  } catch {
+    Write-Warning "轮询请求失败: $_"
+    continue
+  }
+
+  Write-Host "[$(Get-Date -Format HH:mm:ss)] CI Status: $($status.status) / Conclusion: $($status.conclusion) (poll $pollCount/$maxPolls)"
+
+  if ($status.status -eq "completed") {
+    $finalConclusion = $status.conclusion
+    $runUrl = $status.html_url
+    break
+  }
+}
+```
+
+### 7.4 结果处理
+
+构建成功（`$finalConclusion -eq "success"`）：
+- 向用户报告构建成功
+- GitHub Releases 页面：`https://github.com/lucan6290/skills-hub/releases`
+- 告知用户 Release 是 **Draft 状态**，需要在 GitHub Releases 页面手动点 "Publish release" 才会正式发布
+- 提醒已知限制：当前 CI 未配置 updater 签名密钥（`TAURI_PRIVATE_KEY` + `TAURI_KEY_PASSWORD` GitHub Secrets），因此 CI 不会生成签名的 `latest.json` 清单文件，应用内"一键下载更新"功能暂时不可用（用户可以检查到新版本，但无法自动安装，需手动下载安装包升级）
+- CI 构建产物包含：NSIS 安装包（`.exe`）和 MSI 安装包（`.msi`）
+
+构建失败（`$finalConclusion -eq "failure"`）或超时：
+- 向用户报告构建失败/超时
+- 构建日志链接：`$runUrl`
+- 提供修复后重发 tag 的命令：
+  ```powershell
+  git tag -d "$TAG_NAME"
+  git push origin ":refs/tags/$TAG_NAME"
+  # 修复问题后，在最新 commit 上重新打 tag 推送
+  git tag -a "$TAG_NAME" -m "v${NEW_VERSION} 版本发布"
+  git push origin "$TAG_NAME"
+  ```
+- **注意**：不要删除或 revert main 分支上的 release commit（它包含正确的 CHANGELOG 和版本号），只需要删 tag → 修复代码 → 重新打 tag 推送即可
+
+---
+
+## 失败回滚流程
+
+### 阶段 6 之前（本地变更，未推送）
+
+直接恢复本地修改的文件：
+
+```powershell
+git restore --worktree -- CHANGELOG.md frontend/package.json frontend/package-lock.json frontend/src-tauri/Cargo.toml
+```
+
+### 阶段 6 之后（已推送，发现严重问题需要撤回）
+
+```powershell
+# 1. 删除远程 tag（阻止更多用户收到更新）
+git push origin ":refs/tags/$TAG_NAME"
+# 2. 删除本地 tag
+git tag -d "$TAG_NAME"
+# 3. Revert release commit（在 main 分支上创建一个反向提交）
+git revert HEAD --no-edit
+git push origin main
+```
+
+回滚后必须通知用户，说明撤回原因。回滚后如果需要修复重发，在 revert 之后的新 commit 上重新执行阶段 4-7（注意 CHANGELOG.md 中需要重新添加新版本条目，因为 revert 会把之前添加的条目也撤销）。
+
+---
+
+## 参考文件
+
+| 文件 | 用途 |
+|------|------|
+| `scripts/version.mjs` | 版本号同步脚本（package.json / Cargo.toml / package-lock.json） |
+| `scripts/extract-changelog.mjs` | 从 CHANGELOG.md 提取指定版本的 release notes（CI 和阶段 5.3 使用） |
+| `.github/workflows/release.yml` | Release CI 工作流（tag push 触发，Windows runner，产出 nsis .exe + msi .msi） |
+| `.github/workflows/ci.yml` | PR/主干 CI 检查（Ubuntu runner，lint + build） |
+| `CHANGELOG.md` | 版本变更日志（Keep a Changelog 格式） |
+| `frontend/package.json` | 前端版本号源（Vite `define.__APP_VERSION__` 注入） |
+| `frontend/package-lock.json` | 依赖锁定文件（版本号必须与 package.json 同步） |
+| `frontend/src-tauri/Cargo.toml` | Rust 后端版本号 |
+| `frontend/src-tauri/tauri.conf.json` | Tauri 配置（version 指向 `../package.json`，updater pubkey 已配置） |

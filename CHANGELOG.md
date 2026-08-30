@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-30
+
+### Changed
+- 引入 Glassmorphism 毛玻璃设计系统，优化整体视觉风格
+
+### Fixed
+- 对齐 Tauri command 参数命名规范，清理无用依赖
+- 同步更新 package-lock.json 依赖版本
+
+### Technical
+- 修复版本管理脚本 version.mjs 同步 package-lock.json 版本号
+- 添加 Agent 发布工作流文档 docs/release-workflow.md
+
 ## [0.2.0] - 2026-08-26
 
 ### Changed
