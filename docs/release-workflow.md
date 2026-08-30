@@ -5,19 +5,18 @@
 > **路径规则**：所有命令块在执行前确保当前目录为项目根目录（`e:\A-Code\skills-hub`）。使用 `pushd`/`popd` 切换子目录，避免 `cd` 链式依赖。
 >
 > **PowerShell 注意事项**：
-> - 所有 HTTP 请求必须使用 `curl.exe`（不是 `curl`——PS5 中 `curl` 是 `Invoke-WebRequest` 的别名，语法不同）
-> - `curl.exe` 输出通过管道传给 `ConvertFrom-Json` 时，必须先经 `| Out-String` 合并多行（PS5 中逐行传递会解析失败）
 > - 反引号 `` ` `` 续行符后面**不能有空格**，必须紧跟换行符
 
 ## 概述
 
-发布流程分为 **7 个阶段**，每个阶段有明确的检查点和失败处理：
+发布流程分为 **6 个阶段**，每个阶段有明确的检查点和失败处理：
 
 ```
 阶段 1: 前置检查 → 阶段 2: 确定版本号 → 阶段 3: 质量门禁
 → 阶段 4: 生成 CHANGELOG → 阶段 5: 更新版本号 → 阶段 6: 提交/打 tag/推送
-→ 阶段 7: 监控 CI 构建
 ```
+
+> 推送后 CI 构建状态由用户在 GitHub 网页端自行监控，Agent 不通过 API 轮询（避免未认证 API 限流）。
 
 ---
 
@@ -305,18 +304,21 @@ git status
 git diff --stat
 ```
 
-确认只有以下文件被修改：
-- `CHANGELOG.md`
-- `frontend/package.json`
-- `frontend/package-lock.json`
-- `frontend/src-tauri/Cargo.toml`
+确认变更文件属于以下范围：
+- `CHANGELOG.md`（必须）
+- `frontend/package.json`（必须）
+- `frontend/package-lock.json`（必须）
+- `frontend/src-tauri/Cargo.toml`（必须）
+- `scripts/version.mjs`（如有版本脚本修复）
+- `scripts/extract-changelog.mjs`（如有提取逻辑修复）
+- `docs/` 下的发布流程文档（如 `docs/release-workflow.md`，本次发布新增/修改时才会出现）
 
-如果有其他文件变更（如 3.1 中 `npm install` 更新了 lockfile 中其他字段、或 `eslint --fix` 修改了源文件），向用户报告并确认是否纳入。
+如果有其他文件变更（如 3.1 中 `npm install` 更新了 lockfile 中其他字段、或 `eslint --fix` 修改了源文件、或 Tauri 自动生成的 `gen/schemas/` 文件），向用户报告并确认是否纳入。Tauri 自动生成的 schema 文件（`frontend/src-tauri/gen/schemas/*.json`）如果只是行尾格式变化（`git diff` 无实质内容差异），用 `git restore` 恢复后不纳入提交。
 
 ### 6.2 提交
 
 ```powershell
-git add CHANGELOG.md frontend/package.json frontend/package-lock.json frontend/src-tauri/Cargo.toml
+git add CHANGELOG.md frontend/package.json frontend/package-lock.json frontend/src-tauri/Cargo.toml scripts/version.mjs scripts/extract-changelog.mjs docs/
 git commit -m "release: v${NEW_VERSION}"
 ```
 
@@ -346,96 +348,30 @@ git push origin main
 git push origin "$TAG_NAME"
 ```
 
----
+### 6.5 推送后指引
 
-## 阶段 7：监控 CI 构建
+推送成功后，Agent 向用户报告以下信息，**不通过 API 轮询 CI 状态**（避免未认证请求 60 次/小时的限流问题）：
 
-### 7.1 记录关键信息
+1. **CI 监控地址**：告知用户在浏览器打开以下页面查看构建进度：
+   - Actions 页面：`https://github.com/lucan6290/skills-hub/actions`
+   - Release CI 由 tag push 触发（`v*`），在 Windows runner 上构建，通常需要 10-25 分钟
 
-```powershell
-$RELEASE_COMMIT = git rev-parse HEAD
-$RELEASE_COMMIT = $RELEASE_COMMIT.Substring(0, 7)
-$TAG_NAME = "v${NEW_VERSION}"
-Write-Host "Release commit: $RELEASE_COMMIT, Tag: $TAG_NAME"
-```
+2. **构建成功后操作**：
+   - GitHub Releases 页面：`https://github.com/lucan6290/skills-hub/releases`
+   - CI 创建的是 **Draft Release**，需要用户在 Releases 页面手动点 **"Publish release"** 才会正式发布
+   - CI 构建产物包含：NSIS 安装包（`.exe`）和 MSI 安装包（`.msi`）
 
-### 7.2 等待并定位 CI Workflow Run
+3. **已知限制（需告知用户）**：当前 CI 未配置 updater 签名密钥（`TAURI_PRIVATE_KEY` + `TAURI_KEY_PASSWORD` GitHub Secrets），因此 CI 不会生成签名的 `latest.json` 清单文件，应用内"一键下载更新"功能暂时不可用（用户可以检查到新版本，但无法自动安装，需手动下载安装包升级）。
 
-release workflow 由 **tag push 事件**触发（不是 branch push），需要通过以下方式查询：
-
-```powershell
-Start-Sleep -Seconds 30  # 等待 CI 启动
-
-# 查询 release.yml workflow 最近的 runs，通过 tag 名称匹配
-# 注意：curl.exe 输出需经 Out-String 合并为单字符串再给 ConvertFrom-Json
-$runs = curl.exe -s `
-  -H "Accept: application/vnd.github+json" `
-  -H "User-Agent: SkillsHub-Release-Checker" `
-  "https://api.github.com/repos/lucan6290/skills-hub/actions/workflows/release.yml/runs?per_page=10" | Out-String | ConvertFrom-Json
-
-$run = $runs.workflow_runs | Where-Object { $_.head_branch -eq "$TAG_NAME" -and $_.event -eq "push" } | Select-Object -First 1
-
-if (-not $run) {
-  Write-Warning "未找到 tag $TAG_NAME 对应的 release workflow run，请手动检查 https://github.com/lucan6290/skills-hub/actions"
-  return
-}
-
-Write-Host "CI Run found: $($run.html_url)"
-```
-
-> **限流处理**：GitHub API 未认证请求限制为 60 次/小时。如果收到 403 响应（`"API rate limit exceeded"`），停止自动轮询，改为提示用户在浏览器中打开 Actions 页面手动监控。
-
-### 7.3 轮询构建状态
-
-```powershell
-$maxPolls = 40  # 最多轮询 40 分钟（CI 通常 15-25 分钟完成）
-$pollCount = 0
-
-while ($pollCount -lt $maxPolls) {
-  Start-Sleep -Seconds 60
-  $pollCount++
-
-  try {
-    $status = curl.exe -s `
-      -H "Accept: application/vnd.github+json" `
-      -H "User-Agent: SkillsHub-Release-Checker" `
-      $run.url | Out-String | ConvertFrom-Json
-  } catch {
-    Write-Warning "轮询请求失败: $_"
-    continue
-  }
-
-  Write-Host "[$(Get-Date -Format HH:mm:ss)] CI Status: $($status.status) / Conclusion: $($status.conclusion) (poll $pollCount/$maxPolls)"
-
-  if ($status.status -eq "completed") {
-    $finalConclusion = $status.conclusion
-    $runUrl = $status.html_url
-    break
-  }
-}
-```
-
-### 7.4 结果处理
-
-构建成功（`$finalConclusion -eq "success"`）：
-- 向用户报告构建成功
-- GitHub Releases 页面：`https://github.com/lucan6290/skills-hub/releases`
-- 告知用户 Release 是 **Draft 状态**，需要在 GitHub Releases 页面手动点 "Publish release" 才会正式发布
-- 提醒已知限制：当前 CI 未配置 updater 签名密钥（`TAURI_PRIVATE_KEY` + `TAURI_KEY_PASSWORD` GitHub Secrets），因此 CI 不会生成签名的 `latest.json` 清单文件，应用内"一键下载更新"功能暂时不可用（用户可以检查到新版本，但无法自动安装，需手动下载安装包升级）
-- CI 构建产物包含：NSIS 安装包（`.exe`）和 MSI 安装包（`.msi`）
-
-构建失败（`$finalConclusion -eq "failure"`）或超时：
-- 向用户报告构建失败/超时
-- 构建日志链接：`$runUrl`
-- 提供修复后重发 tag 的命令：
-  ```powershell
-  git tag -d "$TAG_NAME"
-  git push origin ":refs/tags/$TAG_NAME"
-  # 修复问题后，在最新 commit 上重新打 tag 推送
-  git tag -a "$TAG_NAME" -m "v${NEW_VERSION} 版本发布"
-  git push origin "$TAG_NAME"
-  ```
-- **注意**：不要删除或 revert main 分支上的 release commit（它包含正确的 CHANGELOG 和版本号），只需要删 tag → 修复代码 → 重新打 tag 推送即可
+4. **CI 失败后重发**：如果构建失败，修复代码后执行以下命令重发 tag（**不要删除或 revert main 分支上的 release commit**，它包含正确的 CHANGELOG 和版本号）：
+   ```powershell
+   # 删除远程和本地旧 tag
+   git push origin ":refs/tags/$TAG_NAME"
+   git tag -d "$TAG_NAME"
+   # 在最新 commit 上重新打 tag 推送
+   git tag -a "$TAG_NAME" -m "v${NEW_VERSION} 版本发布"
+   git push origin "$TAG_NAME"
+   ```
 
 ---
 
@@ -446,7 +382,8 @@ while ($pollCount -lt $maxPolls) {
 直接恢复本地修改的文件：
 
 ```powershell
-git restore --worktree -- CHANGELOG.md frontend/package.json frontend/package-lock.json frontend/src-tauri/Cargo.toml
+git restore --worktree -- CHANGELOG.md frontend/package.json frontend/package-lock.json frontend/src-tauri/Cargo.toml scripts/version.mjs scripts/extract-changelog.mjs
+# 新增的 docs 文件需要手动删除（git restore 不会删除未跟踪文件）
 ```
 
 ### 阶段 6 之后（已推送，发现严重问题需要撤回）
