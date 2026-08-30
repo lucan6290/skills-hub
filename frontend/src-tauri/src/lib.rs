@@ -41,7 +41,9 @@ pub fn run() {
             now.minute(),
             now.second()
         );
-        let backtrace = std::backtrace::Backtrace::capture();
+        // force_capture() ignores the RUST_BACKTRACE env var, which is
+        // typically unset in a desktop GUI application.
+        let backtrace = std::backtrace::Backtrace::force_capture();
         let _ = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
