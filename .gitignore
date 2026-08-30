@@ -76,4 +76,8 @@ frontend/src-tauri/target/
 # Tauri signing key (keep private!)
 .tauri/
 
+# 签名私钥兜底规则（防止任何位置的密钥文件泄露到开源仓库）
+*.key
+*.key.pub
+
 backend/static/
