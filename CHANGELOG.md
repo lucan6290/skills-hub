@@ -4,6 +4,17 @@
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-08-30
+
+### Fixed
+- 修复应用内"一键更新"失败：配置 Tauri 自动更新签名并上传 latest.json 清单
+- 修复 panic 崩溃捕获，改用 force_capture 确保 Backtrace 信息完整
+
+### Technical
+- 企业级日志规范改进，关键错误处理分支补充详细日志上下文，新增专用错误日志和 panic 崩溃捕获
+- 补充签名密钥初始化流程到发布工作流文档
+- 更新 Cargo.lock 和 Tauri 生成的 schema 文件
+
 ## [0.2.2] - 2026-08-30
 
 ### Fixed
