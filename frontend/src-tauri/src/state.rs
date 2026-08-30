@@ -42,7 +42,10 @@ impl AppState {
 impl Default for AppState {
     fn default() -> Self {
         let db_path = crate::config::default_db_path();
-        let db = Database::new(&db_path).expect("failed to initialize database");
+        let db = Database::new(&db_path).unwrap_or_else(|e| {
+            log::error!("数据库初始化失败: {}", e);
+            panic!("failed to initialize database: {}", e);
+        });
         Self::new(db)
     }
 }

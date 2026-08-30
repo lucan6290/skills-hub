@@ -35,6 +35,10 @@ impl Serialize for AppError {
     where
         S: Serializer,
     {
+        // Single-point error logging: every command error returned to the
+        // frontend flows through here. This ensures no error is silently lost.
+        log::error!("[{}] {}", self.code(), self);
+
         let mut response = serializer.serialize_struct("ErrorResponse", 4)?;
         response.serialize_field("ok", &false)?;
         response.serialize_field("code", self.code())?;
@@ -45,7 +49,7 @@ impl Serialize for AppError {
 }
 
 impl AppError {
-    fn code(&self) -> &'static str {
+    pub fn code(&self) -> &'static str {
         match self {
             Self::Unexpected(_) => "INTERNAL_ERROR",
             Self::NotFound(_) => "NOT_FOUND",

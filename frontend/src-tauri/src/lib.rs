@@ -19,7 +19,7 @@ pub mod utils;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::Manager;
-use tauri_plugin_log::{Target, TargetKind};
+use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 
 pub fn run() {
     let log_dir = crate::config::resolve_data_dir().join("logs");
@@ -31,7 +31,7 @@ pub fn run() {
     let error_log_path = log_dir.join("skills-hub-error.log");
     std::panic::set_hook(Box::new(move |panic_info| {
         use std::io::Write;
-        let now = time::OffsetDateTime::now_utc();
+        let now = time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
         let timestamp = format!(
             "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
             now.year(),
@@ -41,12 +41,14 @@ pub fn run() {
             now.minute(),
             now.second()
         );
+        let backtrace = std::backtrace::Backtrace::capture();
         let _ = std::fs::OpenOptions::new()
             .create(true)
             .append(true)
             .open(&error_log_path)
             .and_then(|mut f| {
                 writeln!(f, "[{}] [PANIC] {}", timestamp, panic_info)?;
+                writeln!(f, "Backtrace:\n{}", backtrace)?;
                 writeln!(f, "--------------------------------------------------")?;
                 Ok(())
             });
@@ -73,21 +75,27 @@ pub fn run() {
     };
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_log::Builder::new().targets([
-            Target::new(TargetKind::Stdout),
-            Target::new(TargetKind::Folder {
-                path: log_dir.clone(),
-                file_name: Some("skills-hub".to_string()),
-            }),
-            // Dedicated error log: only captures Error-level messages
-            // → skills-hub-error.log
-            Target::new(TargetKind::Folder {
-                path: log_dir,
-                file_name: Some("skills-hub-error".to_string()),
-            })
-            .filter(|metadata| metadata.level() == log::Level::Error),
-            Target::new(TargetKind::Webview),
-        ]).level(level_filter).build())
+        .plugin(tauri_plugin_log::Builder::new()
+            .targets([
+                Target::new(TargetKind::Stdout),
+                Target::new(TargetKind::Folder {
+                    path: log_dir.clone(),
+                    file_name: Some("skills-hub".to_string()),
+                }),
+                // Dedicated error log: only captures Error-level messages
+                // → skills-hub-error.log
+                Target::new(TargetKind::Folder {
+                    path: log_dir,
+                    file_name: Some("skills-hub-error".to_string()),
+                })
+                .filter(|metadata| metadata.level() == log::Level::Error),
+                Target::new(TargetKind::Webview),
+            ])
+            .level(level_filter)
+            .max_file_size(10_000_000) // 10 MB per file
+            .rotation_strategy(RotationStrategy::KeepSome(7)) // keep 7 rotated files
+            .timezone_strategy(TimezoneStrategy::UseLocal)
+            .build())
         // single-instance must be the first plugin; the deep-link feature forwards
         // scheme URLs from a second process to the running instance.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -119,7 +127,10 @@ pub fn run() {
             // "minimize_to_tray" (default) → hide window; "quit" → exit app.
             let main_window = app
                 .get_webview_window("main")
-                .expect("main window not found");
+                .unwrap_or_else(|| {
+                    log::error!("setup 阶段未找到主窗口");
+                    panic!("main window not found");
+                });
             let app_handle = app.handle().clone();
             let db_for_close = state::AppState::default_db_ref(&app_handle);
             main_window.clone().on_window_event(move |event| {
@@ -274,7 +285,10 @@ pub fn run() {
             crate::commands::misc::open_new_window,
         ])
         .run(tauri::generate_context!())
-        .expect("failed to run Skills Hub");
+        .unwrap_or_else(|e| {
+            log::error!("应用启动失败: {}", e);
+            panic!("failed to run Skills Hub: {}", e);
+        });
 }
 
 /// Build the system tray icon with a context menu.
@@ -356,7 +370,10 @@ fn build_tray(app: &tauri::AppHandle) -> tauri::Result<()> {
     let icon = app
         .default_window_icon()
         .cloned()
-        .expect("window icon must be configured");
+        .unwrap_or_else(|| {
+            log::error!("窗口图标未配置");
+            panic!("window icon must be configured");
+        });
 
     TrayIconBuilder::with_id("main-tray")
         .icon(icon)
