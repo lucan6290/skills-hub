@@ -1,4 +1,4 @@
-﻿use tauri::AppHandle;
+use tauri::AppHandle;
 use tauri_plugin_updater::UpdaterExt;
 
 use crate::error::{AppError, AppResult};
@@ -26,12 +26,18 @@ pub async fn check_update(app: AppHandle) -> AppResult<CheckUpdateResponse> {
 pub async fn do_update(app: AppHandle) -> AppResult<PerformUpdateResponse> {
     let updater = app
         .updater()
-        .map_err(|e| AppError::UpdateError(format!("updater 未配置: {e}")))?;
+        .map_err(|e| {
+            log::warn!("[UPDATE_ERROR] do_update: updater not configured | {}", e);
+            AppError::UpdateError(format!("updater 未配置: {e}"))
+        })?;
 
     let update = updater
         .check()
         .await
-        .map_err(|e| AppError::UpdateError(format!("检查更新失败: {e}")))?;
+        .map_err(|e| {
+            log::warn!("[UPDATE_ERROR] do_update: check failed | {}", e);
+            AppError::UpdateError(format!("检查更新失败: {e}"))
+        })?;
 
     let Some(update) = update else {
         return Ok(PerformUpdateResponse {
@@ -43,7 +49,10 @@ pub async fn do_update(app: AppHandle) -> AppResult<PerformUpdateResponse> {
     update
         .download_and_install(|_chunk, _total| {}, || {})
         .await
-        .map_err(|e| AppError::UpdateError(format!("下载/安装更新失败: {e}")))?;
+        .map_err(|e| {
+            log::error!("[UPDATE_ERROR] do_update: download_and_install failed | version={} {}", update.version, e);
+            AppError::UpdateError(format!("下载/安装更新失败: {e}"))
+        })?;
 
     app.restart()
 }

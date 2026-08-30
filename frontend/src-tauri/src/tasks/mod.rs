@@ -195,15 +195,18 @@ impl TaskManager {
     }
 
     fn run_task(inner: Arc<TaskManagerInner>, task_id: String, task_fn: TaskFn) {
-        // Mark as running
-        {
+        // Mark as running and capture kind for error logging
+        let kind = {
             let mut tasks = inner.tasks.lock().unwrap();
             if let Some(task) = tasks.get_mut(&task_id) {
                 task.status = TaskStatus::Running;
                 task.started_at = Some(now_ms());
                 task.message = "running".to_string();
+                task.kind.clone()
+            } else {
+                return;
             }
-        }
+        };
 
         let ctx = TaskContext {
             manager: inner.clone(),
@@ -227,6 +230,7 @@ impl TaskManager {
                 }
             }
             Err(err) => {
+                log::error!("[TASK_FAILED] task_id={} kind={} error={}", task_id, kind, err);
                 let mut tasks = inner.tasks.lock().unwrap();
                 if let Some(task) = tasks.get_mut(&task_id) {
                     if task.cancel_requested || err.contains("cancelled") {

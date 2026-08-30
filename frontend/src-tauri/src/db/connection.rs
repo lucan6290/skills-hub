@@ -52,7 +52,10 @@ impl Database {
             .conn
             .lock()
             .map_err(|e| AppError::Unexpected(format!("Failed to acquire database lock: {}", e)))?;
-        f(&guard).map_err(|e| AppError::Unexpected(format!("Database error: {}", e)))
+        f(&guard).map_err(|e| {
+            log::warn!("[DB_ERROR] with_conn failed: {}", e);
+            AppError::Unexpected(format!("Database error: {}", e))
+        })
     }
 
     pub fn with_conn_mut<F, T>(&self, f: F) -> AppResult<T>
@@ -63,7 +66,10 @@ impl Database {
             .conn
             .lock()
             .map_err(|e| AppError::Unexpected(format!("Failed to acquire database lock: {}", e)))?;
-        f(&guard).map_err(|e| AppError::Unexpected(format!("Database error: {}", e)))
+        f(&guard).map_err(|e| {
+            log::warn!("[DB_ERROR] with_conn_mut failed: {}", e);
+            AppError::Unexpected(format!("Database error: {}", e))
+        })
     }
 
     fn ensure_schema(&self) -> AppResult<()> {

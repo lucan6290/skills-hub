@@ -1,4 +1,4 @@
-﻿use tauri::State;
+use tauri::State;
 
 use crate::db::now_ms;
 use crate::error::{AppError, AppResult};
@@ -60,7 +60,10 @@ pub async fn sync_skill_to_tool(
         overwrite,
         adapter.force_copy,
     )
-    .map_err(|e| AppError::FileSystemError(e))?;
+    .map_err(|e| {
+        log::warn!("[SYNC_ERROR] sync_skill_to_tool failed | skill_id={} tool={} scope={}", skill_id, tool, scope);
+        AppError::FileSystemError(e)
+    })?;
 
     // Record target in database
     let now = now_ms();
@@ -84,7 +87,10 @@ pub async fn sync_skill_to_tool(
     let targets_repo = SkillTargetsRepository::new(&state.db);
     targets_repo
         .upsert(&target)
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| {
+            log::warn!("[DB_ERROR] sync_skill_to_tool: upsert target failed | skill_id={} tool={}", skill_id, tool);
+            AppError::DatabaseError(e.to_string())
+        })?;
 
     // Update skill last_sync_at
     state
@@ -96,7 +102,10 @@ pub async fn sync_skill_to_tool(
             )?;
             Ok::<_, rusqlite::Error>(())
         })
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| {
+            log::warn!("[DB_ERROR] sync_skill_to_tool: update last_sync_at failed | skill_id={}", skill_id);
+            AppError::DatabaseError(e.to_string())
+        })?;
 
     Ok(())
 }
@@ -114,7 +123,10 @@ pub async fn unsync_skill_from_tool(
     let targets_repo = SkillTargetsRepository::new(&state.db);
     let target = targets_repo
         .get(&skill_id, &tool, &scope, project_path.as_deref())
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| {
+            log::warn!("[DB_ERROR] unsync_skill_from_tool: get target failed | skill_id={} tool={}", skill_id, tool);
+            AppError::DatabaseError(e.to_string())
+        })?;
 
     if let Some(t) = target {
         // Remove the synced path
@@ -122,7 +134,10 @@ pub async fn unsync_skill_from_tool(
         // Delete from DB
         targets_repo
             .delete(&skill_id, &tool, &scope, project_path.as_deref())
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            .map_err(|e| {
+                log::warn!("[DB_ERROR] unsync_skill_from_tool: delete target failed | skill_id={} tool={}", skill_id, tool);
+                AppError::DatabaseError(e.to_string())
+            })?;
     }
 
     Ok(())
@@ -201,7 +216,10 @@ pub async fn sync_suite_to_tool(
             overwrite,
             adapter.force_copy,
         )
-        .map_err(|e| AppError::FileSystemError(e))?;
+        .map_err(|e| {
+            log::warn!("[SYNC_ERROR] sync_suite_to_tool: sub-skill sync failed | skill_id={} tool={} sub={}", skill_id, tool, sub_name);
+            AppError::FileSystemError(e)
+        })?;
 
         let target = SkillTarget {
             id: uuid::Uuid::new_v4().to_string(),
@@ -222,7 +240,10 @@ pub async fn sync_suite_to_tool(
         };
         targets_repo
             .upsert(&target)
-            .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+            .map_err(|e| {
+                log::warn!("[DB_ERROR] sync_suite_to_tool: upsert sub-target failed | skill_id={} tool={}", skill_id, tool);
+                AppError::DatabaseError(e.to_string())
+            })?;
     }
 
     // Also record the suite-level target
@@ -270,7 +291,10 @@ pub async fn unsync_suite_from_tool(
     let targets_repo = SkillTargetsRepository::new(&state.db);
     let deleted = targets_repo
         .delete_suite_targets(&skill_id, &tool, &scope, project_path.as_deref())
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| {
+            log::warn!("[DB_ERROR] unsync_suite_from_tool: delete suite targets failed | skill_id={} tool={}", skill_id, tool);
+            AppError::DatabaseError(e.to_string())
+        })?;
 
     for t in &deleted {
         let _ = crate::skills::sync_engine::unsync_target(&t.target_path);

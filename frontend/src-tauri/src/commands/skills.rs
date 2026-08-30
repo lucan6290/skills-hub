@@ -97,10 +97,15 @@ pub async fn delete_managed_skill(state: State<'_, AppState>, skill_id: String) 
             conn.execute("DELETE FROM skill_usage WHERE skill_id = ?1", [&skill_id])?;
             Ok::<_, rusqlite::Error>(())
         })
-        .map_err(|e| AppError::DatabaseError(e.to_string()))?;
+        .map_err(|e| {
+            log::warn!("[DB_ERROR] delete_managed_skill: cascade delete failed | skill_id={}", skill_id);
+            AppError::DatabaseError(e.to_string())
+        })?;
 
-    repo.delete(&skill_id)
-        .map_err(|e| AppError::DatabaseError(e.to_string()))
+    repo.delete(&skill_id).map_err(|e| {
+        log::warn!("[DB_ERROR] delete_managed_skill: delete skill failed | skill_id={}", skill_id);
+        AppError::DatabaseError(e.to_string())
+    })
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -142,10 +147,16 @@ pub async fn import_existing_skill(
         None,
         &source_type,
     )
-    .map_err(|e| AppError::FileSystemError(e))?;
+    .map_err(|e| {
+        log::warn!("[INSTALL_ERROR] import_existing_skill: install failed | path={} source_type={}", source_path, source_type);
+        AppError::FileSystemError(e)
+    })?;
 
     upsert_skill_from_install(&state.db, &result, &source_path, &source_type)
-        .map_err(|e| AppError::DatabaseError(e))?;
+        .map_err(|e| {
+            log::warn!("[DB_ERROR] import_existing_skill: upsert failed | path={}", source_path);
+            AppError::DatabaseError(e)
+        })?;
 
     Ok(serde_json::json!({
         "skill_id": result.skill_id,
