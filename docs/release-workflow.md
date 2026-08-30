@@ -20,6 +20,64 @@
 
 ---
 
+## 发布前置：签名密钥（一次性初始化）
+
+> 应用内"一键更新"依赖 Tauri updater 的签名机制，需要一对 minisign 密钥。这是**发布基础设施**，只需初始化一次，后续每次发版自动复用。**若从未初始化，应先完成本章节**。
+
+### 为什么需要签名密钥
+
+- 开发者用**私钥**在 CI 构建时给安装包和 `latest.json` 清单签名
+- 应用内置**公钥**（`tauri.conf.json` 的 `plugins.updater.pubkey`），用户端下载更新包时用它验证签名
+- 没有有效签名，用户点"更新"会报错（`Could not fetch a valid release JSON`）
+
+### 一次性初始化步骤
+
+**第 1 步：生成密钥对**
+
+```powershell
+# 生成 32 位随机密码（妥善保存，丢失后无法再签名更新包）
+$KEY_PASSWORD = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object {[char]$_})
+Write-Host "密钥密码（务必保存）：$KEY_PASSWORD"
+
+# 生成密钥对（--ci 跳过交互提示）
+pushd frontend
+$env:CI = "true"
+npx tauri signer generate -w "$env:USERPROFILE\.tauri\skills-hub.key" -p $KEY_PASSWORD
+popd
+```
+
+产物：
+- 私钥：`~/.tauri/skills-hub.key`（**保密，绝不提交到仓库**）
+- 公钥：`~/.tauri/skills-hub.key.pub`
+
+**第 2 步：把公钥写入 `tauri.conf.json`**
+
+将 `plugins.updater.pubkey` 更新为 `skills-hub.key.pub` 文件的完整内容。
+
+**第 3 步：配置 GitHub Secrets**
+
+在 `https://github.com/lucan6290/skills-hub/settings/secrets/actions` 添加两个 Secret：
+
+| Name | Value |
+|------|-------|
+| `TAURI_SIGNING_PRIVATE_KEY` | `skills-hub.key` 文件**完整内容**（含首尾注释行） |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | 第 1 步生成的密码 |
+
+**第 4 步：确认 `.gitignore` 已兜底**
+
+确认 `.gitignore` 包含 `*.key` 和 `*.key.pub` 规则，防止私钥被误提交到开源仓库。
+
+### fork 开发者注意事项
+
+其他开发者 fork 本仓库后，`tauri.conf.json` 里是维护者的 pubkey，但他们没有对应的私钥。要启用自己仓库的自动更新，必须：
+1. 用第 1 步生成**自己的**密钥对
+2. 替换 `tauri.conf.json` 的 pubkey 为自己的公钥
+3. 在自己的仓库 Secrets 里配置自己的私钥和密码
+
+否则他们构建的应用自动更新会失败。
+
+---
+
 ## 阶段 1：前置检查
 
 在开始任何发布操作前，必须逐一通过以下检查。任一项失败则停止流程并报告。
@@ -114,7 +172,7 @@ git ls-remote --tags origin "$TAG_NAME"
 
 如果本地或远程已存在同名 tag：
 - 向用户报告，询问是否为重新发布
-- 如果是重新发布（CI 上次失败后修复重发），按阶段 7.3 中的"重发 tag"流程先删除旧 tag
+- 如果是重新发布（CI 上次失败后修复重发），按阶段 6.5 中的"CI 失败后重发"流程先删除旧 tag
 - 如果不是重新发布，停止流程让用户决定版本号
 
 ---
@@ -361,7 +419,7 @@ git push origin "$TAG_NAME"
    - CI 创建的是 **Draft Release**，需要用户在 Releases 页面手动点 **"Publish release"** 才会正式发布
    - CI 构建产物包含：NSIS 安装包（`.exe`）和 MSI 安装包（`.msi`）
 
-3. **已知限制（需告知用户）**：当前 CI 未配置 updater 签名密钥（`TAURI_PRIVATE_KEY` + `TAURI_KEY_PASSWORD` GitHub Secrets），因此 CI 不会生成签名的 `latest.json` 清单文件，应用内"一键下载更新"功能暂时不可用（用户可以检查到新版本，但无法自动安装，需手动下载安装包升级）。
+3. **签名密钥状态（需确认）**：应用内"一键更新"依赖签名密钥和 `latest.json` 清单。若已完成「发布前置：签名密钥」初始化，CI 会生成签名的 `latest.json` 并上传，自动更新可正常使用；若 GitHub Secrets（`TAURI_SIGNING_PRIVATE_KEY` + `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`）未配置，CI 构建会跳过签名产物，用户点"更新"会失败（只能手动下载安装包升级）。
 
 4. **CI 失败后重发**：如果构建失败，修复代码后执行以下命令重发 tag（**不要删除或 revert main 分支上的 release commit**，它包含正确的 CHANGELOG 和版本号）：
    ```powershell
@@ -398,7 +456,7 @@ git revert HEAD --no-edit
 git push origin main
 ```
 
-回滚后必须通知用户，说明撤回原因。回滚后如果需要修复重发，在 revert 之后的新 commit 上重新执行阶段 4-7（注意 CHANGELOG.md 中需要重新添加新版本条目，因为 revert 会把之前添加的条目也撤销）。
+回滚后必须通知用户，说明撤回原因。回滚后如果需要修复重发，在 revert 之后的新 commit 上重新执行阶段 4-6（注意 CHANGELOG.md 中需要重新添加新版本条目，因为 revert 会把之前添加的条目也撤销）。
 
 ---
 
@@ -408,10 +466,11 @@ git push origin main
 |------|------|
 | `scripts/version.mjs` | 版本号同步脚本（package.json / Cargo.toml / package-lock.json） |
 | `scripts/extract-changelog.mjs` | 从 CHANGELOG.md 提取指定版本的 release notes（CI 和阶段 5.3 使用） |
-| `.github/workflows/release.yml` | Release CI 工作流（tag push 触发，Windows runner，产出 nsis .exe + msi .msi） |
+| `.github/workflows/release.yml` | Release CI 工作流（tag push 触发，Windows runner，产出 nsis .exe + msi .msi + latest.json） |
 | `.github/workflows/ci.yml` | PR/主干 CI 检查（Ubuntu runner，lint + build） |
 | `CHANGELOG.md` | 版本变更日志（Keep a Changelog 格式） |
 | `frontend/package.json` | 前端版本号源（Vite `define.__APP_VERSION__` 注入） |
 | `frontend/package-lock.json` | 依赖锁定文件（版本号必须与 package.json 同步） |
 | `frontend/src-tauri/Cargo.toml` | Rust 后端版本号 |
-| `frontend/src-tauri/tauri.conf.json` | Tauri 配置（version 指向 `../package.json`，updater pubkey 已配置） |
+| `frontend/src-tauri/tauri.conf.json` | Tauri 配置（version 指向 `../package.json`，`createUpdaterArtifacts` 开启签名产物，updater pubkey 已配置） |
+| `.gitignore` | 忽略规则（含 `*.key` / `*.key.pub` 防止签名私钥泄露） |
